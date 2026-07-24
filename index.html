@@ -807,6 +807,7 @@
               <div class="am-row-sub">${l.datetime.slice(0,10)}・${escapeHtml(l.account)}${l.note?('・'+escapeHtml(l.note)):''}</div>
             </div>
             <div class="am-row-amt ${l.type==='收入'?'inc':'exp'} am-num">${l.type==='收入'?'+':'-'}${Math.abs(l.amount).toLocaleString('zh-Hant-TW')}</div>
+            <button class="am-adj-btn" data-edit-tx="${l.id}" style="margin-left:6px;">編輯</button>
           </div>`).join('');
       } else {
         const map = {};
@@ -848,6 +849,34 @@
         <div class="am-hint" style="margin-top:0;">這段期間收入 <b style="color:var(--green)">${fmtMoney(totalIncome)}</b>・支出 <b style="color:var(--rust)">${fmtMoney(totalExpense)}</b>(帳戶間轉帳不算在內,轉帳手續費仍算支出)</div>
         <div class="am-list">${bodyHtml}</div>
         <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">關閉</button></div>
+      </div></div>`;
+    }
+
+    if(modal.type==='editTx'){
+      const tx = state.ledger.find(l=>l.id===modal.txId);
+      if(!tx) return '';
+      if(!modal.pendingType) modal.pendingType = tx.type;
+      const pocket = state.pockets.find(p=>p.account===tx.account);
+      return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">編輯這筆紀錄</div>
+        <div class="am-field"><label>類型</label>
+          <div class="am-seg">
+            <button class="${modal.pendingType==='收入'?'sel inc':''}" data-set-etxtype="收入">收入</button>
+            <button class="${modal.pendingType==='支出'?'sel exp':''}" data-set-etxtype="支出">支出</button>
+          </div>
+        </div>
+        <div class="am-field"><label>大分類</label><input type="text" id="am-etx-cat1" value="${escapeHtml(tx.cat1)}"></div>
+        <div class="am-field"><label>細項</label><input type="text" id="am-etx-cat2" value="${escapeHtml(tx.cat2||'')}"></div>
+        <div class="am-field"><label>金額</label><input type="number" inputmode="decimal" id="am-etx-amount" value="${Math.abs(tx.amount)}"></div>
+        <div class="am-field"><label>口袋</label>
+          <select id="am-etx-pocket">
+            ${state.pockets.map(p=>`<option value="${p.id}" ${pocket&&pocket.id===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="am-field"><label>日期</label><input type="date" id="am-etx-date" value="${tx.datetime.slice(0,10)}"></div>
+        <div class="am-field"><label>備註(選填)</label><input type="text" id="am-etx-note" value="${escapeHtml(tx.note||'')}"></div>
+        <div class="am-sheet-actions"><button class="am-btn danger" id="am-del-tx">刪除</button><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-edittx">儲存</button></div>
       </div></div>`;
     }
 
@@ -1150,6 +1179,43 @@
       root.querySelectorAll('[data-tx-group]').forEach(b=>{
         b.onclick = ()=>{ txView.group = b.dataset.txGroup; render(); };
       });
+      root.querySelectorAll('[data-edit-tx]').forEach(b=>{
+        b.onclick = ()=>{ openModal({type:'editTx', txId:b.dataset.editTx}); };
+      });
+    }
+
+    if(modal.type==='editTx'){
+      root.querySelectorAll('[data-set-etxtype]').forEach(b=>{
+        b.onclick = ()=>{ modal.pendingType = b.dataset.setEtxtype; render(); };
+      });
+      $('#am-save-edittx').onclick = ()=>{
+        const tx = state.ledger.find(l=>l.id===modal.txId);
+        if(!tx) return;
+        const cat1 = $('#am-etx-cat1').value.trim();
+        const cat2 = $('#am-etx-cat2').value.trim();
+        const amount = parseFloat($('#am-etx-amount').value);
+        const pocketId = $('#am-etx-pocket').value;
+        const date = $('#am-etx-date').value;
+        const note = $('#am-etx-note').value.trim();
+        const pocket = state.pockets.find(p=>p.id===pocketId);
+        if(!cat1){ showToast('請輸入大分類'); return; }
+        if(!amount || amount<=0){ showToast('請輸入正確金額'); return; }
+        if(!pocket){ showToast('請選擇口袋'); return; }
+        if(!date){ showToast('請選擇日期'); return; }
+        tx.type = modal.pendingType || tx.type;
+        tx.cat1 = cat1; tx.cat2 = cat2;
+        tx.amount = tx.type==='收入' ? Math.abs(amount) : -Math.abs(amount);
+        tx.account = pocket.account;
+        tx.datetime = date+'T'+tx.datetime.slice(11);
+        tx.note = note;
+        closeModal(); showToast('已更新這筆紀錄');
+        persist('am2:ledger', state.ledger);
+      };
+      $('#am-del-tx').onclick = ()=>{
+        state.ledger = state.ledger.filter(l=>l.id!==modal.txId);
+        closeModal(); showToast('已刪除這筆紀錄');
+        persist('am2:ledger', state.ledger);
+      };
     }
 
     if(modal.type==='quickEntry'){
