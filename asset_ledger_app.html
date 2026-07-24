@@ -1,0 +1,1349 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root{
+    --ink:#20281f;
+    --ink-soft:#5b6155;
+    --paper:#FAF6EC;
+    --paper-card:#FFFDF7;
+    --hairline:#E3DAC2;
+    --green:#1B6E52;
+    --green-soft:#DCEDE4;
+    --rust:#B65C38;
+    --rust-soft:#F3E3D8;
+    --gold:#C89B3C;
+    --gold-soft:#F4EAD1;
+    --radius:16px;
+    --shadow: 0 1px 2px rgba(32,40,31,0.04), 0 6px 20px rgba(32,40,31,0.06);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:var(--paper); }
+  #am-root{
+    font-family:'Inter', sans-serif; color:var(--ink);
+    max-width:480px; margin:0 auto; min-height:100vh;
+    background:var(--paper); position:relative; padding-bottom:96px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .am-num{ font-family:'Manrope', sans-serif; font-weight:700; font-variant-numeric: tabular-nums; }
+
+  .am-header{
+    position:sticky; top:0; z-index:20;
+    background:rgba(250,246,236,0.98);
+    border-bottom:1px solid var(--hairline); padding:14px 18px 12px;
+  }
+  .am-header-top{ display:flex; align-items:center; justify-content:space-between; }
+  .am-title{ font-family:'Manrope', sans-serif; font-weight:800; font-size:19px; }
+  .am-payday-chip{ display:flex; align-items:center; gap:5px; font-size:12px; color:var(--ink-soft); cursor:pointer; }
+  .am-payday-chip b{ color:var(--ink); font-weight:700; }
+  .am-cycle-text{ font-size:11.5px; color:var(--ink-soft); margin-top:3px; }
+
+  .am-body{ padding:16px 16px 8px; }
+  .am-card{
+    background:var(--paper-card); border-radius:var(--radius); box-shadow:var(--shadow);
+    border:1px solid var(--hairline); padding:18px; margin-bottom:16px;
+  }
+  .am-section-title{
+    font-size:13px; font-weight:700; color:var(--ink-soft); letter-spacing:0.06em; text-transform:uppercase;
+    margin:0 0 10px 2px; display:flex; align-items:center; justify-content:space-between;
+  }
+  .am-add-btn{ border:none; background:none; color:var(--green); font-weight:600; font-size:13px; cursor:pointer; padding:4px 2px; }
+
+  .am-warning-banner{
+    background:var(--rust-soft); border:1px solid var(--rust); border-radius:14px; padding:13px 15px;
+    margin-bottom:16px; font-size:13px; color:var(--rust);
+  }
+  .am-warning-banner .t{ font-weight:700; font-size:13.5px; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+  .am-warning-banner ul{ margin:0; padding-left:18px; }
+  .am-warning-banner li{ margin-bottom:2px; }
+
+  .am-net-card{ display:flex; align-items:center; gap:18px; }
+  .am-net-info{ flex:1; }
+  .am-net-eyebrow{ font-size:12px; color:var(--ink-soft); font-weight:600; margin-bottom:4px; }
+  .am-net-value{ font-size:28px; font-weight:800; line-height:1.1; }
+  .am-net-goal-text{ font-size:12.5px; color:var(--ink-soft); margin-top:6px; }
+  .am-net-breakdown{ font-size:12px; color:var(--ink-soft); margin-top:5px; }
+  .am-net-breakdown b{ color:var(--ink); font-weight:700; }
+  .am-net-goal-text b{ color:var(--gold); font-weight:700; }
+  .am-ring-wrap{ position:relative; width:92px; height:92px; flex-shrink:0; cursor:pointer; }
+  .am-ring-pct{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; font-family:'Manrope',sans-serif; font-weight:800; }
+  .am-ring-pct .p{ font-size:18px; }
+  .am-ring-pct .l{ font-family:'Inter',sans-serif; font-size:9px; color:var(--ink-soft); font-weight:600; }
+
+  .am-import-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .am-file-btn{ display:inline-flex; align-items:center; gap:6px; background:var(--green); color:#fff; padding:9px 14px; border-radius:10px; font-size:13.5px; font-weight:700; cursor:pointer; border:none; white-space:nowrap; }
+  .am-import-status{ font-size:12px; color:var(--ink-soft); margin-top:10px; line-height:1.5; }
+
+  .am-list{ display:flex; flex-direction:column; }
+  .am-row{ display:flex; align-items:center; gap:10px; padding:11px 0; border-bottom:1px solid var(--hairline); }
+  .am-row:last-child{ border-bottom:none; }
+  .am-row-main{ flex:1; min-width:0; }
+  .am-row-name{ font-size:14.5px; font-weight:600; }
+  .am-row-sub{ font-size:11.5px; color:var(--ink-soft); margin-top:1px; }
+  .am-row-amt{ font-family:'Manrope',sans-serif; font-size:15px; font-weight:700; white-space:nowrap; text-align:right; }
+  .am-row-del{ border:none; background:none; color:#b7ac8f; cursor:pointer; font-size:16px; padding:2px 4px; }
+  .am-empty{ font-size:13px; color:var(--ink-soft); padding:14px 2px; text-align:center; }
+  .am-pocket-shortfall{ color:var(--rust); }
+  .am-pocket-ok{ color:var(--green); }
+  .am-adj-btn{ border:1px solid var(--hairline); background:#fff; color:var(--ink-soft); font-size:12px; font-weight:700; border-radius:8px; padding:3px 8px; cursor:pointer; }
+  .am-detail-link{ text-decoration:underline; cursor:pointer; color:var(--ink-soft); font-size:11px; }
+
+  .am-progress-bar{ height:7px; border-radius:5px; background:var(--hairline); overflow:hidden; margin-top:6px; }
+  .am-progress-fill{ height:100%; border-radius:5px; }
+
+  .am-budget-view-bar{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+  .am-budget-mode-toggle{ display:flex; flex-shrink:0; }
+  .am-seg{ display:flex; gap:8px; }
+  .am-seg button{ flex:1; padding:9px; border-radius:10px; border:1px solid var(--hairline); background:#fff; font-size:13.5px; font-weight:600; cursor:pointer; color:var(--ink-soft); }
+  .am-seg button.sel.inc{ background:var(--green-soft); color:var(--green); border-color:var(--green); }
+  .am-seg button.sel.exp{ background:var(--rust-soft); color:var(--rust); border-color:var(--rust); }
+  .am-view-toggle{ border:1px solid var(--hairline); background:#fff; padding:6px 14px; font-size:13px; font-weight:700; color:var(--ink-soft); cursor:pointer; }
+  .am-view-toggle:first-child{ border-radius:8px 0 0 8px; }
+  .am-view-toggle:last-child{ border-radius:0 8px 8px 0; border-left:none; }
+  .am-view-toggle.sel{ background:var(--green-soft); color:var(--green); border-color:var(--green); }
+  .am-period-nav{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-soft); }
+  .am-period-nav button{ border:none; background:var(--paper); width:24px; height:24px; border-radius:50%; cursor:pointer; font-size:13px; color:var(--ink); }
+  .am-period-label{ font-weight:700; color:var(--ink); min-width:64px; text-align:center; }
+  .am-budget-basis-row{ display:flex; gap:8px; margin-bottom:8px; }
+  .am-basis-chip{ flex:1; padding:7px 8px; border-radius:10px; border:1px solid var(--hairline); background:#fff; font-size:12px; font-weight:700; color:var(--ink-soft); cursor:pointer; }
+  .am-basis-chip.sel{ background:var(--gold-soft); color:var(--gold); border-color:var(--gold); }
+
+  .am-checkbox{ width:22px; height:22px; border-radius:7px; border:1.5px solid var(--hairline); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:13px; flex-shrink:0; color:#fff; }
+  .am-checkbox.checked{ background:var(--green); border-color:var(--green); }
+
+  .am-manage-link{ text-align:center; font-size:12.5px; color:var(--ink-soft); text-decoration:underline; cursor:pointer; margin:4px 0 2px; }
+
+  .am-quick-tabs{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+  .am-quick-tab{ padding:6px 12px; border-radius:8px; border:1px solid var(--hairline); background:#fff; font-size:12.5px; font-weight:700; color:var(--ink-soft); cursor:pointer; }
+  .am-quick-tab.sel{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+  .am-quick-tab.inc.sel{ background:var(--green); border-color:var(--green); }
+  .am-quick-grid{ display:flex; flex-wrap:wrap; gap:8px; }
+  .am-quick-chip{ padding:9px 14px; border-radius:20px; font-size:13.5px; font-weight:700; border:1.5px solid; background:#fff; cursor:pointer; }
+  .am-quick-chip.exp{ color:var(--rust); border-color:var(--rust-soft); }
+  .am-quick-chip.inc{ color:var(--green); border-color:var(--green-soft); }
+  .am-quick-manage-row{ display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--hairline); }
+
+  .am-tabbar{ position:fixed; left:0; right:0; bottom:0; z-index:30; max-width:480px; margin:0 auto; display:flex; justify-content:space-around; align-items:flex-end; padding:0 10px 10px; pointer-events:none; }
+  .am-tabbar-bg{ position:fixed; left:0; right:0; bottom:0; z-index:29; max-width:480px; margin:0 auto; height:74px; background:rgba(250,246,236,0.98); border-top:1px solid var(--hairline); }
+  .am-tab{ pointer-events:auto; flex:1; max-width:100px; display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 4px 8px; border-radius:12px 12px 6px 6px; background:var(--paper-card); border:1px solid var(--hairline); border-bottom:none; cursor:pointer; transform:translateY(6px); transition:transform .15s ease; }
+  .am-tab.active{ transform:translateY(-2px); box-shadow:var(--shadow); }
+  .am-tab-icon{ font-size:18px; line-height:1; }
+  .am-tab-label{ font-size:10.5px; font-weight:700; color:var(--ink-soft); }
+  .am-tab.active .am-tab-label{ color:var(--ink); }
+  .am-tab.disabled{ opacity:0.55; }
+
+  .am-overlay{ position:fixed; inset:0; background:rgba(32,26,15,0.35); z-index:50; display:flex; align-items:flex-end; justify-content:center; }
+  .am-sheet{ background:var(--paper-card); width:100%; max-width:480px; border-radius:20px 20px 0 0; padding:20px 18px calc(20px + env(safe-area-inset-bottom)); max-height:86vh; overflow-y:auto; box-shadow: 0 -8px 30px rgba(0,0,0,0.15); }
+  .am-sheet-title{ font-family:'Manrope',sans-serif; font-size:18px; font-weight:700; margin-bottom:16px; }
+  .am-field{ margin-bottom:14px; }
+  .am-field label{ display:block; font-size:12px; font-weight:700; color:var(--ink-soft); margin-bottom:6px; }
+  .am-field input, .am-field select{ width:100%; border:1px solid var(--hairline); background:#fff; border-radius:10px; padding:10px 12px; font-size:14.5px; font-family:'Inter',sans-serif; color:var(--ink); }
+  .am-field input:focus, .am-field select:focus{ outline:2px solid var(--green); outline-offset:1px; }
+  .am-sheet-actions{ display:flex; gap:10px; margin-top:18px; }
+  .am-btn{ flex:1; padding:12px; border-radius:12px; border:none; font-size:14.5px; font-weight:700; cursor:pointer; }
+  .am-btn.primary{ background:var(--green); color:#fff; }
+  .am-btn.ghost{ background:none; color:var(--ink-soft); border:1px solid var(--hairline); }
+  .am-btn.danger{ background:var(--rust); color:#fff; }
+  .am-hint{ font-size:11.5px; color:var(--ink-soft); margin-top:-8px; margin-bottom:14px; }
+
+  .am-toast{ position:fixed; left:50%; bottom:104px; transform:translateX(-50%); background:var(--ink); color:var(--paper); padding:9px 16px; border-radius:20px; font-size:13px; z-index:60; box-shadow:var(--shadow); max-width:80%; text-align:center; }
+  .am-loading{ padding:60px 20px; text-align:center; color:var(--ink-soft); font-size:14px; }
+</style>
+
+<div id="am-root">
+  <div class="am-loading">正在準備你的帳本…</div>
+</div>
+
+<script>
+(function(){
+  const root = document.getElementById('am-root');
+  const EXCLUDED_FLOW_CATS = ['轉帳','更新餘額','借出','借入','收回','歸還','收益'];
+  const IMPORT_CUTOFF = '2026-03-01';
+  /* 內嵌種子資料:來自使用者上傳的 收支.csv,已篩選只保留 2026-03 之後 */
+  const SEED_LEDGER = [{"type": "支出", "datetime": "2026-07-23T10:28:46", "account": "未指定帳戶(現金)", "amount": -317.0, "cat1": "購物", "cat2": "其他購物", "note": "美甲"}, {"type": "支出", "datetime": "2026-07-23T08:23:41", "account": "中信 吃喝雜支 218-83=135", "amount": -1000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-07-23T08:23:41", "account": "未指定帳戶(現金)", "amount": 1000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-07-23T08:23:06", "account": "群益 6000", "amount": -5000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-07-23T08:23:06", "account": "中信 吃喝雜支 218-83=135", "amount": 5000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-07-22T20:23:34", "account": "未指定帳戶(現金)", "amount": -160.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-07-22T20:23:34", "account": "中信 吃喝雜支 218-83=135", "amount": 160.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-07-22T20:23:00", "account": "未指定帳戶(現金)", "amount": -80.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-07-22T20:22:52", "account": "未指定帳戶(現金)", "amount": -160.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-07-22T10:08:37", "account": "中信 吃喝雜支 218-83=135", "amount": -1288.0, "cat1": "固定支出", "cat2": "健身", "note": ""}, {"type": "支出", "datetime": "2026-07-22T10:08:03", "account": "群益 6000", "amount": -3000.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-07-22T08:59:13", "account": "未指定帳戶(現金)", "amount": -482.0, "cat1": "生活", "cat2": "生活用品", "note": "增高架"}, {"type": "收入", "datetime": "2026-07-21T22:31:25", "account": "群益 6000", "amount": 168.0, "cat1": "收益", "cat2": "收益", "note": ""}, {"type": "支出", "datetime": "2026-07-21T11:09:44", "account": "陽信 2500固定支出 摩托車保險", "amount": -91.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-07-21T11:09:44", "account": "中信 吃喝雜支 218-83=135", "amount": 91.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-07-21T11:07:57", "account": "中信 吃喝雜支 218-83=135", "amount": -2832.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-07-21T11:07:57", "account": "群益 6000", "amount": 2832.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-07-21T07:46:51", "account": "群益 6000", "amount": 10000.0, "cat1": "收益", "cat2": "收益", "note": ""}, {"type": "支出", "datetime": "2026-07-21T07:44:31", "account": "群益 6000", "amount": -3000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-07-21T07:44:31", "account": "中信 吃喝雜支 218-83=135", "amount": 3000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-07-20T18:41:44", "account": "中信 吃喝雜支 218-83=135", "amount": -125.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-07-20T15:05:54", "account": "未指定帳戶(現金)", "amount": -100.0, "cat1": "吃喝", "cat2": "點心", "note": "拍冰"}, {"type": "支出", "datetime": "2026-07-19T23:52:18", "account": "中信 吃喝雜支 218-83=135", "amount": -100.0, "cat1": "娛樂", "cat2": "其他娛樂", "note": "保齡球"}, {"type": "支出", "datetime": "2026-07-19T23:52:04", "account": "中信 吃喝雜支 218-83=135", "amount": -370.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-07-19T13:19:19", "account": "未指定帳戶(現金)", "amount": -150.0, "cat1": "交通", "cat2": "火車", "note": ""}, {"type": "支出", "datetime": "2026-07-18T20:10:41", "account": "Line 4500一次性支出 購物", "amount": -900.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-07-18T20:10:41", "account": "中信 吃喝雜支 218-83=135", "amount": 900.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-07-18T20:06:06", "account": "未指定帳戶(現金)", "amount": -348.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-07-18T19:12:09", "account": "未指定帳戶(現金)", "amount": -80.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-07-18T17:38:06", "account": "未指定帳戶(現金)", "amount": -699.0, "cat1": "Puli", "cat2": "房子", "note": "本尊"}, {"type": "支出", "datetime": "2026-07-18T12:16:42", "account": "中信 吃喝雜支 218-83=135", "amount": -260.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-07-18T12:15:35", "account": "未指定帳戶(現金)", "amount": -310.0, "cat1": "生活", "cat2": "生活用品", "note": "記帳本"}, {"type": "支出", "datetime": "2026-07-18T12:15:16", "account": "中信 吃喝雜支 218-83=135", "amount": -180.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-07-18T12:10:25", "account": "未指定帳戶(現金)", "amount": -290.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-07-17T20:37:07", "account": "中信 吃喝雜支 218-83=135", "amount": -447.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-07-17T19:19:18", "account": "中信 吃喝雜支 218-83=135", "amount": -81.0, "cat1": "交通", "cat2": "阿菱菱的車車", "note": ""}, {"type": "支出", "datetime": "2026-07-17T09:26:21", "account": "中信 吃喝雜支 218-83=135", "amount": -63.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-07-15T21:33:17", "account": "中信 吃喝雜支 218-83=135", "amount": -2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-07-15T21:33:17", "account": "未指定帳戶(現金)", "amount": 2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-07-15T21:32:36", "account": "未指定帳戶(現金)", "amount": -412.0, "cat1": "Puli", "cat2": "耗材", "note": ""}, {"type": "支出", "datetime": "2026-07-15T21:24:16", "account": "未指定帳戶(現金)", "amount": -173.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-07-15T21:02:27", "account": "中信 吃喝雜支 218-83=135", "amount": -270.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-07-15T16:38:34", "account": "中信 吃喝雜支 218-83=135", "amount": -60.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-07-15T16:28:03", "account": "中信 吃喝雜支 218-83=135", "amount": -30.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-07-15T09:19:51", "account": "中信 吃喝雜支 218-83=135", "amount": -10.0, "cat1": "吃喝", "cat2": "飲品", "note": "多多"}, {"type": "支出", "datetime": "2026-07-14T19:46:43", "account": "中信 吃喝雜支 218-83=135", "amount": -165.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-07-14T19:39:01", "account": "中信 吃喝雜支 218-83=135", "amount": -130.0, "cat1": "交通", "cat2": "其他交通", "note": ""}, {"type": "支出", "datetime": "2026-07-13T18:58:45", "account": "中信 吃喝雜支 218-83=135", "amount": -57.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-07-12T19:46:47", "account": "未指定帳戶(現金)", "amount": -896.0, "cat1": "生活", "cat2": "生活用品", "note": "收納"}, {"type": "支出", "datetime": "2026-07-12T12:51:13", "account": "未指定帳戶(現金)", "amount": -55.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-07-12T12:09:16", "account": "未指定帳戶(現金)", "amount": -135.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-07-11T17:50:06", "account": "中信 吃喝雜支 218-83=135", "amount": -2190.0, "cat1": "學習", "cat2": "其他學習", "note": "Epop"}, {"type": "支出", "datetime": "2026-07-09T19:47:42", "account": "未指定帳戶(現金)", "amount": -200.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-07-09T12:30:47", "account": "中信 吃喝雜支 218-83=135", "amount": -277.0, "cat1": "生活", "cat2": "生活用品", "note": "頭皮"}, {"type": "支出", "datetime": "2026-07-08T21:07:02", "account": "中信 吃喝雜支 218-83=135", "amount": -2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-07-08T21:07:02", "account": "未指定帳戶(現金)", "amount": 2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-07-08T20:49:39", "account": "未指定帳戶(現金)", "amount": -44.0, "cat1": "吃喝", "cat2": "水果", "note": ""}, {"type": "支出", "datetime": "2026-07-08T20:39:21", "account": "中信 吃喝雜支 218-83=135", "amount": -220.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-07-08T16:30:58", "account": "中信 吃喝雜支 218-83=135", "amount": -60.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-07-08T09:15:27", "account": "中信 吃喝雜支 218-83=135", "amount": -50.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-07-07T21:29:23", "account": "中信 吃喝雜支 218-83=135", "amount": -157.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-07-07T20:55:10", "account": "未指定帳戶(現金)", "amount": -210.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-07-07T15:28:14", "account": "陽信 2500固定支出 摩托車保險", "amount": -690.0, "cat1": "固定支出", "cat2": "Claude", "note": ""}, {"type": "支出", "datetime": "2026-07-07T15:28:01", "account": "陽信 2500固定支出 摩托車保險", "amount": -1998.0, "cat1": "固定支出", "cat2": "手機", "note": ""}, {"type": "支出", "datetime": "2026-07-07T15:26:22", "account": "中信 吃喝雜支 218-83=135", "amount": -200.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-07-07T15:26:22", "account": "陽信 2500固定支出 摩托車保險", "amount": 200.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-07-06T18:42:01", "account": "中信 吃喝雜支 218-83=135", "amount": -68.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-07-06T18:39:45", "account": "未指定帳戶(現金)", "amount": -110.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-07-06T17:18:13", "account": "中信 吃喝雜支 218-83=135", "amount": -42.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-07-06T11:17:31", "account": "未指定帳戶(現金)", "amount": -536.0, "cat1": "生活", "cat2": "生活用品", "note": "滅蚊 手機架"}, {"type": "支出", "datetime": "2026-07-06T11:17:02", "account": "未指定帳戶(現金)", "amount": -447.0, "cat1": "生活", "cat2": "生活用品", "note": "卸妝"}, {"type": "支出", "datetime": "2026-07-06T11:16:43", "account": "未指定帳戶(現金)", "amount": -316.0, "cat1": "吃喝", "cat2": "早餐", "note": "玉米"}, {"type": "支出", "datetime": "2026-07-06T09:15:09", "account": "中信 吃喝雜支 218-83=135", "amount": -36.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-07-05T19:36:00", "account": "中信 吃喝雜支 218-83=135", "amount": -155.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-07-05T19:25:40", "account": "未指定帳戶(現金)", "amount": -535.0, "cat1": "生活", "cat2": "生活用品", "note": ""}, {"type": "支出", "datetime": "2026-07-04T20:33:26", "account": "中信 吃喝雜支 218-83=135", "amount": -516.0, "cat1": "娛樂", "cat2": "其他娛樂", "note": "KTV"}, {"type": "支出", "datetime": "2026-07-04T12:45:03", "account": "中信 吃喝雜支 218-83=135", "amount": -410.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-07-03T21:56:46", "account": "中信 吃喝雜支 218-83=135", "amount": -661.0, "cat1": "交通", "cat2": "高鐵", "note": ""}, {"type": "支出", "datetime": "2026-07-03T18:47:32", "account": "未指定帳戶(現金)", "amount": -80.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-07-03T18:20:07", "account": "中信 吃喝雜支 218-83=135", "amount": -2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-07-03T18:20:07", "account": "未指定帳戶(現金)", "amount": 2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-07-03T16:05:18", "account": "中信 吃喝雜支 218-83=135", "amount": -1296.0, "cat1": "Puli", "cat2": "耗材", "note": ""}, {"type": "支出", "datetime": "2026-07-03T14:48:46", "account": "中信 吃喝雜支 218-83=135", "amount": -133.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-07-03T14:11:17", "account": "中信 吃喝雜支 218-83=135", "amount": -797.0, "cat1": "購物", "cat2": "衣服鞋子", "note": ""}, {"type": "支出", "datetime": "2026-07-03T12:07:34", "account": "中信 吃喝雜支 218-83=135", "amount": -360.0, "cat1": "吃喝", "cat2": "午餐", "note": "麋鹿爺爺"}, {"type": "支出", "datetime": "2026-07-03T10:56:42", "account": "中信 吃喝雜支 218-83=135", "amount": -3006.0, "cat1": "Puli", "cat2": "房子", "note": ""}, {"type": "支出", "datetime": "2026-07-03T10:52:02", "account": "中信 吃喝雜支 218-83=135", "amount": -2000.0, "cat1": "歸還", "cat2": "歸還", "note": ""}, {"type": "支出", "datetime": "2026-07-03T10:51:31", "account": "群益 6000", "amount": -5000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-07-03T10:51:31", "account": "中信 吃喝雜支 218-83=135", "amount": 5000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-07-03T10:51:07", "account": "中信 吃喝雜支 218-83=135", "amount": -152.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-07-03T10:51:07", "account": "Line 4500一次性支出 購物", "amount": 152.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-07-03T10:49:43", "account": "中信 吃喝雜支 218-83=135", "amount": -777.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-07-03T10:49:43", "account": "Line 4500一次性支出 購物", "amount": 777.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-07-03T10:47:57", "account": "中信 吃喝雜支 218-83=135", "amount": -2300.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-07-03T10:47:57", "account": "陽信 2500固定支出 摩托車保險", "amount": 2300.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-07-03T10:46:23", "account": "中信 吃喝雜支 218-83=135", "amount": -7000.0, "cat1": "固定支出", "cat2": "房租", "note": ""}, {"type": "收入", "datetime": "2026-07-03T09:38:13", "account": "中信 吃喝雜支 218-83=135", "amount": 26069.0, "cat1": "收入", "cat2": "工資", "note": ""}, {"type": "支出", "datetime": "2026-07-03T09:23:16", "account": "未指定帳戶(現金)", "amount": -100.0, "cat1": "交通", "cat2": "火車", "note": ""}, {"type": "支出", "datetime": "2026-07-02T19:54:21", "account": "中信 吃喝雜支 218-83=135", "amount": -170.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-07-02T18:55:41", "account": "未指定帳戶(現金)", "amount": -84.0, "cat1": "交通", "cat2": "阿菱菱的車車", "note": ""}, {"type": "支出", "datetime": "2026-07-02T09:32:46", "account": "中信 吃喝雜支 218-83=135", "amount": -36.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-07-02T08:19:17", "account": "Line 4500一次性支出 購物", "amount": -16.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-07-02T08:19:17", "account": "Line口袋帳戶 3000", "amount": 16.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-07-01T19:22:35", "account": "未指定帳戶(現金)", "amount": -1830.0, "cat1": "購物", "cat2": "衣服鞋子", "note": "拉拉衫"}, {"type": "支出", "datetime": "2026-07-01T19:22:28", "account": "中信 吃喝雜支 218-83=135", "amount": -2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-07-01T19:22:28", "account": "未指定帳戶(現金)", "amount": 2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-07-01T19:22:17", "account": "中信 吃喝雜支 218-83=135", "amount": -139.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-07-01T19:21:48", "account": "未指定帳戶(現金)", "amount": -500.0, "cat1": "購物", "cat2": "飾品", "note": "美甲"}, {"type": "支出", "datetime": "2026-07-01T14:39:39", "account": "郵局 生活餘額 旅遊預存2500", "amount": -146.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-07-01T14:39:39", "account": "中信 吃喝雜支 218-83=135", "amount": 146.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-07-01T08:58:21", "account": "群益 6000", "amount": -2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-07-01T08:58:21", "account": "中信 吃喝雜支 218-83=135", "amount": 2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-06-30T19:27:10", "account": "未指定帳戶(現金)", "amount": -140.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-06-30T19:26:59", "account": "中信 吃喝雜支 218-83=135", "amount": -60.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-06-29T19:22:05", "account": "中信 吃喝雜支 218-83=135", "amount": -140.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-06-28T23:03:38", "account": "中信 吃喝雜支 218-83=135", "amount": -112.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-06-28T22:30:47", "account": "未指定帳戶(現金)", "amount": -1193.0, "cat1": "生活", "cat2": "生活用品", "note": ""}, {"type": "支出", "datetime": "2026-06-28T12:44:23", "account": "中信 吃喝雜支 218-83=135", "amount": -1000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-06-28T12:44:23", "account": "未指定帳戶(現金)", "amount": 1000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-06-28T12:38:45", "account": "中信 吃喝雜支 218-83=135", "amount": -100.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-06-27T15:20:44", "account": "中信 吃喝雜支 218-83=135", "amount": -69.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-06-27T14:54:13", "account": "中信 吃喝雜支 218-83=135", "amount": -878.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "收入", "datetime": "2026-06-27T14:06:39", "account": "中信 吃喝雜支 218-83=135", "amount": 2000.0, "cat1": "借入", "cat2": "借入", "note": ""}, {"type": "支出", "datetime": "2026-06-27T12:02:33", "account": "未指定帳戶(現金)", "amount": -200.0, "cat1": "交通", "cat2": "火車", "note": ""}, {"type": "支出", "datetime": "2026-06-26T18:18:28", "account": "中信 吃喝雜支 218-83=135", "amount": -59.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-06-25T19:25:13", "account": "中信 吃喝雜支 218-83=135", "amount": -28.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-06-25T18:37:59", "account": "中信 吃喝雜支 218-83=135", "amount": -280.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-06-25T18:37:51", "account": "中信 吃喝雜支 218-83=135", "amount": -1000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-06-25T18:37:51", "account": "未指定帳戶(現金)", "amount": 1000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-06-25T15:14:44", "account": "未指定帳戶(現金)", "amount": 250.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-06-25T15:14:31", "account": "未指定帳戶(現金)", "amount": -60.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-06-24T20:24:15", "account": "中信 吃喝雜支 218-83=135", "amount": -334.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-06-24T18:46:06", "account": "中信 吃喝雜支 218-83=135", "amount": -195.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-06-24T15:43:08", "account": "中信 吃喝雜支 218-83=135", "amount": -60.0, "cat1": "吃喝", "cat2": "點心", "note": "韭菜盒子"}, {"type": "支出", "datetime": "2026-06-24T15:39:42", "account": "中信 吃喝雜支 218-83=135", "amount": -440.0, "cat1": "交通", "cat2": "公車", "note": "高鐵"}, {"type": "收入", "datetime": "2026-06-24T11:07:17", "account": "郵局 生活餘額 旅遊預存2500", "amount": 2.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-06-24T11:06:30", "account": "中信 吃喝雜支 218-83=135", "amount": -574.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "收入", "datetime": "2026-06-24T11:06:24", "account": "陽信 2500固定支出 摩托車保險", "amount": 9.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-06-24T11:06:14", "account": "Line 4500一次性支出 購物", "amount": -41.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-06-24T09:30:38", "account": "中信 吃喝雜支 218-83=135", "amount": -1659.0, "cat1": "生活", "cat2": "生活用品", "note": "口噴口香糖"}, {"type": "支出", "datetime": "2026-06-24T08:03:06", "account": "群益 6000", "amount": -4500.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-06-24T08:03:06", "account": "中信 吃喝雜支 218-83=135", "amount": 4500.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-06-23T21:27:07", "account": "中信 吃喝雜支 218-83=135", "amount": -390.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-06-23T18:04:58", "account": "中信 吃喝雜支 218-83=135", "amount": -75.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "收入", "datetime": "2026-06-22T23:28:07", "account": "中信 吃喝雜支 218-83=135", "amount": 780.0, "cat1": "收入", "cat2": "其他收入", "note": "學士服租金"}, {"type": "支出", "datetime": "2026-06-22T23:27:56", "account": "中信 吃喝雜支 218-83=135", "amount": -1000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-06-22T23:27:56", "account": "未指定帳戶(現金)", "amount": 1000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-06-22T23:26:55", "account": "陽信 2500固定支出 摩托車保險", "amount": -1300.0, "cat1": "購物", "cat2": "飾品", "note": "美甲"}, {"type": "支出", "datetime": "2026-06-22T23:26:33", "account": "未指定帳戶(現金)", "amount": -1565.0, "cat1": "生活", "cat2": "生活用品", "note": "生活用品補貨"}, {"type": "支出", "datetime": "2026-06-22T20:07:11", "account": "未指定帳戶(現金)", "amount": -1237.0, "cat1": "購物", "cat2": "其他購物", "note": "雨衣 定妝噴霧"}, {"type": "支出", "datetime": "2026-06-21T21:17:25", "account": "中信 吃喝雜支 218-83=135", "amount": -71.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-06-21T14:35:00", "account": "中信 吃喝雜支 218-83=135", "amount": -45.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-06-21T12:37:43", "account": "未指定帳戶(現金)", "amount": -819.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-06-21T11:33:55", "account": "未指定帳戶(現金)", "amount": -75.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-06-21T11:32:20", "account": "未指定帳戶(現金)", "amount": -295.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-06-21T10:27:18", "account": "中信 吃喝雜支 218-83=135", "amount": -1288.0, "cat1": "生活", "cat2": "運動健身", "note": ""}, {"type": "支出", "datetime": "2026-06-20T18:24:11", "account": "未指定帳戶(現金)", "amount": -242.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-06-20T18:12:26", "account": "Line 4500一次性支出 購物", "amount": -2700.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-06-20T18:12:26", "account": "未指定帳戶(現金)", "amount": 2700.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-06-20T18:11:48", "account": "未指定帳戶(現金)", "amount": -270.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-06-20T12:23:50", "account": "未指定帳戶(現金)", "amount": -920.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-06-19T20:01:25", "account": "未指定帳戶(現金)", "amount": -70.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-06-19T19:51:11", "account": "未指定帳戶(現金)", "amount": -100.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-06-19T19:42:42", "account": "中信 吃喝雜支 218-83=135", "amount": -145.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-06-19T15:44:30", "account": "中信 吃喝雜支 218-83=135", "amount": -65.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-06-19T15:41:54", "account": "中信 吃喝雜支 218-83=135", "amount": -440.0, "cat1": "醫療", "cat2": "藥品", "note": ""}, {"type": "支出", "datetime": "2026-06-19T15:38:53", "account": "未指定帳戶(現金)", "amount": -99.0, "cat1": "醫療", "cat2": "藥品", "note": "防蚊"}, {"type": "支出", "datetime": "2026-06-19T14:17:30", "account": "未指定帳戶(現金)", "amount": -5600.0, "cat1": "旅行", "cat2": "住宿", "note": "宜蘭"}, {"type": "支出", "datetime": "2026-06-19T10:28:11", "account": "中信 吃喝雜支 218-83=135", "amount": -306.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-06-19T08:27:31", "account": "中信 吃喝雜支 218-83=135", "amount": -5000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-06-19T08:27:31", "account": "未指定帳戶(現金)", "amount": 5000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-06-19T08:27:27", "account": "中信 吃喝雜支 218-83=135", "amount": -55.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-06-18T20:51:08", "account": "中信 吃喝雜支 218-83=135", "amount": -85.0, "cat1": "購物", "cat2": "其他購物", "note": "章魚"}, {"type": "支出", "datetime": "2026-06-18T20:48:30", "account": "中信 吃喝雜支 218-83=135", "amount": -430.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-06-18T09:19:16", "account": "中信 吃喝雜支 218-83=135", "amount": -51.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-06-17T21:42:01", "account": "未指定帳戶(現金)", "amount": -629.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-06-17T21:39:03", "account": "中信 吃喝雜支 218-83=135", "amount": -309.0, "cat1": "旅行", "cat2": "交通", "note": "搭車去台北"}, {"type": "支出", "datetime": "2026-06-17T16:32:27", "account": "中信 吃喝雜支 218-83=135", "amount": -89.0, "cat1": "交通", "cat2": "阿菱菱的車車", "note": ""}, {"type": "支出", "datetime": "2026-06-17T13:58:29", "account": "中信 吃喝雜支 218-83=135", "amount": -410.0, "cat1": "交通", "cat2": "火車", "note": ""}, {"type": "收入", "datetime": "2026-06-17T09:29:16", "account": "中信 吃喝雜支 218-83=135", "amount": 4927.0, "cat1": "收入", "cat2": "獎金", "note": ""}, {"type": "支出", "datetime": "2026-06-16T22:20:54", "account": "中信 吃喝雜支 218-83=135", "amount": -85.0, "cat1": "生活", "cat2": "生活用品", "note": "禮物"}, {"type": "支出", "datetime": "2026-06-16T21:09:17", "account": "未指定帳戶(現金)", "amount": -1100.0, "cat1": "旅行", "cat2": "住宿", "note": "實習報告"}, {"type": "支出", "datetime": "2026-06-16T15:22:14", "account": "中信 吃喝雜支 218-83=135", "amount": -50.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-06-16T08:51:59", "account": "中信 吃喝雜支 218-83=135", "amount": -418.0, "cat1": "交通", "cat2": "火車", "note": ""}, {"type": "支出", "datetime": "2026-06-15T19:40:25", "account": "中信 吃喝雜支 218-83=135", "amount": -135.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-06-15T18:33:28", "account": "未指定帳戶(現金)", "amount": -55.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-06-15T18:29:18", "account": "中信 吃喝雜支 218-83=135", "amount": -217.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-06-15T12:20:36", "account": "中信 吃喝雜支 218-83=135", "amount": -39.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-06-15T09:33:28", "account": "中信 吃喝雜支 218-83=135", "amount": -30.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-06-14T19:31:27", "account": "未指定帳戶(現金)", "amount": -600.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-06-14T16:57:20", "account": "未指定帳戶(現金)", "amount": -500.0, "cat1": "交通", "cat2": "火車", "note": ""}, {"type": "支出", "datetime": "2026-06-14T12:04:07", "account": "中信 吃喝雜支 218-83=135", "amount": -234.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-06-13T19:32:11", "account": "中信 吃喝雜支 218-83=135", "amount": -190.0, "cat1": "生活", "cat2": "約會", "note": ""}, {"type": "支出", "datetime": "2026-06-13T19:07:33", "account": "Line 4500一次性支出 購物", "amount": -5000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-06-13T19:07:33", "account": "未指定帳戶(現金)", "amount": 5000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-06-13T19:01:18", "account": "中信 吃喝雜支 218-83=135", "amount": -68.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-06-13T17:40:52", "account": "中信 吃喝雜支 218-83=135", "amount": -836.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-06-13T15:22:49", "account": "中信 吃喝雜支 218-83=135", "amount": -200.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-06-13T08:20:45", "account": "中信 吃喝雜支 218-83=135", "amount": -95.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-06-12T18:37:49", "account": "未指定帳戶(現金)", "amount": -65.0, "cat1": "吃喝", "cat2": "點心", "note": "紅豆餅"}, {"type": "支出", "datetime": "2026-06-12T15:53:40", "account": "中信 吃喝雜支 218-83=135", "amount": -100.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-06-12T15:42:35", "account": "中信 吃喝雜支 218-83=135", "amount": -32.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-06-11T21:06:04", "account": "中信 吃喝雜支 218-83=135", "amount": -250.0, "cat1": "吃喝", "cat2": "晚餐", "note": "牛排"}, {"type": "支出", "datetime": "2026-06-11T21:05:38", "account": "未指定帳戶(現金)", "amount": -788.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-06-11T21:01:12", "account": "中信 吃喝雜支 218-83=135", "amount": -833.0, "cat1": "交通", "cat2": "火車", "note": "下雲林"}, {"type": "支出", "datetime": "2026-06-11T20:11:01", "account": "未指定帳戶(現金)", "amount": -450.0, "cat1": "醫療", "cat2": "藥品", "note": "事前"}, {"type": "支出", "datetime": "2026-06-10T19:14:22", "account": "未指定帳戶(現金)", "amount": -79.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-06-10T18:02:08", "account": "Line 4500一次性支出 購物", "amount": -55.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-06-10T10:02:58", "account": "Line 4500一次性支出 購物", "amount": -760.0, "cat1": "醫療", "cat2": "保健品", "note": "事前"}, {"type": "支出", "datetime": "2026-06-10T10:02:30", "account": "中信 吃喝雜支 218-83=135", "amount": -59.0, "cat1": "生活", "cat2": "手機話費", "note": "酷澎會員"}, {"type": "支出", "datetime": "2026-06-09T18:53:39", "account": "中信 吃喝雜支 218-83=135", "amount": -212.0, "cat1": "吃喝", "cat2": "晚餐", "note": "麥當勞"}, {"type": "支出", "datetime": "2026-06-09T09:24:04", "account": "中信 吃喝雜支 218-83=135", "amount": -25.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-06-08T21:02:51", "account": "中信 吃喝雜支 218-83=135", "amount": -201.0, "cat1": "生活", "cat2": "生活用品", "note": "螞蟻藥"}, {"type": "支出", "datetime": "2026-06-08T19:18:03", "account": "中信 吃喝雜支 218-83=135", "amount": -235.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-06-07T12:59:32", "account": "中信 吃喝雜支 218-83=135", "amount": -450.0, "cat1": "吃喝", "cat2": "午餐", "note": "冉冉"}, {"type": "支出", "datetime": "2026-06-07T12:00:40", "account": "未指定帳戶(現金)", "amount": -1574.0, "cat1": "生活", "cat2": "生活用品", "note": "衣架 晾衣 床單 枕頭"}, {"type": "支出", "datetime": "2026-06-07T12:00:20", "account": "未指定帳戶(現金)", "amount": -1428.0, "cat1": "購物", "cat2": "衣服鞋子", "note": "防曬衣"}, {"type": "支出", "datetime": "2026-06-06T22:55:12", "account": "中信 吃喝雜支 218-83=135", "amount": -143.0, "cat1": "吃喝", "cat2": "宵夜", "note": ""}, {"type": "支出", "datetime": "2026-06-06T21:16:38", "account": "中信 吃喝雜支 218-83=135", "amount": -90.0, "cat1": "交通", "cat2": "阿菱菱的車車", "note": ""}, {"type": "支出", "datetime": "2026-06-06T15:18:40", "account": "中信 吃喝雜支 218-83=135", "amount": -258.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-06-06T15:18:30", "account": "未指定帳戶(現金)", "amount": -680.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-06-06T12:43:17", "account": "中信 吃喝雜支 218-83=135", "amount": -250.0, "cat1": "吃喝", "cat2": "午餐", "note": "拉麵"}, {"type": "支出", "datetime": "2026-06-06T12:43:09", "account": "中信 吃喝雜支 218-83=135", "amount": -5000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-06-06T12:43:09", "account": "未指定帳戶(現金)", "amount": 5000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-06-06T12:30:48", "account": "中信 吃喝雜支 218-83=135", "amount": -5833.0, "cat1": "生活", "cat2": "房租", "note": ""}, {"type": "支出", "datetime": "2026-06-06T12:30:40", "account": "中信 吃喝雜支 218-83=135", "amount": -7000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-06-05T22:10:11", "account": "中信 吃喝雜支 218-83=135", "amount": -1390.0, "cat1": "吃喝", "cat2": "晚餐", "note": "藏壽司"}, {"type": "支出", "datetime": "2026-06-05T12:42:15", "account": "中信 吃喝雜支 218-83=135", "amount": -110.0, "cat1": "購物", "cat2": "生活用品", "note": "衛生紙"}, {"type": "支出", "datetime": "2026-06-05T09:36:01", "account": "中信 吃喝雜支 218-83=135", "amount": -645.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "收入", "datetime": "2026-06-05T09:35:48", "account": "中信 吃喝雜支 218-83=135", "amount": 30826.0, "cat1": "收入", "cat2": "工資", "note": ""}, {"type": "支出", "datetime": "2026-06-05T09:18:47", "account": "中信 吃喝雜支 218-83=135", "amount": -38.0, "cat1": "吃喝", "cat2": "飲品", "note": "拿鐵"}, {"type": "支出", "datetime": "2026-06-04T20:56:59", "account": "未指定帳戶(現金)", "amount": -290.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-06-04T18:56:51", "account": "郵局 生活餘額 旅遊預存2500", "amount": -757.0, "cat1": "吃喝", "cat2": "其他吃喝", "note": ""}, {"type": "支出", "datetime": "2026-06-04T12:53:19", "account": "Line 4500一次性支出 購物", "amount": -1500.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-06-04T12:53:19", "account": "群益 6000", "amount": 1500.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-06-04T10:34:06", "account": "中信 吃喝雜支 218-83=135", "amount": 383.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-06-03T20:33:05", "account": "未指定帳戶(現金)", "amount": -170.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-06-03T19:34:01", "account": "陽信 2500固定支出 摩托車保險", "amount": -1300.0, "cat1": "醫療", "cat2": "看醫生", "note": "看腳"}, {"type": "支出", "datetime": "2026-06-02T20:37:31", "account": "中信 吃喝雜支 218-83=135", "amount": -32.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-06-02T19:42:37", "account": "中信 吃喝雜支 218-83=135", "amount": -209.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-06-02T14:27:20", "account": "中信 吃喝雜支 218-83=135", "amount": -65.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-06-02T11:03:30", "account": "陽信 2500固定支出 摩托車保險", "amount": -605.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-06-02T11:03:08", "account": "陽信 2500固定支出 摩托車保險", "amount": -10000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-06-02T11:03:08", "account": "陽信 2500固定支出 摩托車保險", "amount": -12.0, "cat1": "手續費", "cat2": "轉帳手續費", "note": ""}, {"type": "收入", "datetime": "2026-06-02T11:03:08", "account": "Line 4500一次性支出 購物", "amount": 10000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-06-01T23:28:33", "account": "郵局 生活餘額 旅遊預存2500", "amount": -1120.0, "cat1": "吃喝", "cat2": "飲品", "note": "咖啡"}, {"type": "支出", "datetime": "2026-06-01T23:08:55", "account": "Line 4500一次性支出 購物", "amount": -150.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-06-01T22:58:50", "account": "中信 吃喝雜支 218-83=135", "amount": -200.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-06-01T22:58:50", "account": "Line 4500一次性支出 購物", "amount": 200.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-06-01T20:10:49", "account": "未指定帳戶(現金)", "amount": -206.0, "cat1": "生活", "cat2": "毛線", "note": ""}, {"type": "支出", "datetime": "2026-06-01T20:08:54", "account": "未指定帳戶(現金)", "amount": -294.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-06-01T19:29:19", "account": "中信 吃喝雜支 218-83=135", "amount": -186.0, "cat1": "吃喝", "cat2": "晚餐", "note": "漢堡王"}, {"type": "支出", "datetime": "2026-06-01T10:07:26", "account": "中信 吃喝雜支 218-83=135", "amount": -1275.0, "cat1": "購物", "cat2": "包包", "note": "樂天Quokka手提"}, {"type": "支出", "datetime": "2026-06-01T08:38:27", "account": "中信 吃喝雜支 218-83=135", "amount": -277.0, "cat1": "購物", "cat2": "衣服鞋子", "note": "褲子"}, {"type": "支出", "datetime": "2026-05-31T19:47:27", "account": "未指定帳戶(現金)", "amount": -45.0, "cat1": "吃喝", "cat2": "早餐", "note": "香蕉"}, {"type": "支出", "datetime": "2026-05-31T19:21:29", "account": "未指定帳戶(現金)", "amount": -110.0, "cat1": "吃喝", "cat2": "晚餐", "note": "紅燒肉便當"}, {"type": "支出", "datetime": "2026-05-31T11:36:31", "account": "中信 吃喝雜支 218-83=135", "amount": -215.0, "cat1": "吃喝", "cat2": "午餐", "note": "麥當勞"}, {"type": "支出", "datetime": "2026-05-30T22:03:29", "account": "中信 吃喝雜支 218-83=135", "amount": -25.0, "cat1": "吃喝", "cat2": "飲品", "note": "水"}, {"type": "支出", "datetime": "2026-05-30T21:41:22", "account": "中信 吃喝雜支 218-83=135", "amount": -193.0, "cat1": "交通", "cat2": "火車", "note": ""}, {"type": "支出", "datetime": "2026-05-30T21:36:09", "account": "中信 吃喝雜支 218-83=135", "amount": -140.0, "cat1": "交通", "cat2": "阿菱菱的車車", "note": ""}, {"type": "支出", "datetime": "2026-05-30T17:48:25", "account": "未指定帳戶(現金)", "amount": -270.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-30T14:27:23", "account": "未指定帳戶(現金)", "amount": -310.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-05-30T13:52:09", "account": "中信 吃喝雜支 218-83=135", "amount": -2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-05-30T13:52:09", "account": "未指定帳戶(現金)", "amount": 2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-05-30T13:51:58", "account": "未指定帳戶(現金)", "amount": -2587.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-05-29T19:34:13", "account": "未指定帳戶(現金)", "amount": -300.0, "cat1": "吃喝", "cat2": "晚餐", "note": "牛排"}, {"type": "支出", "datetime": "2026-05-28T21:40:22", "account": "中信 吃喝雜支 218-83=135", "amount": -89.0, "cat1": "交通", "cat2": "阿菱菱的車車", "note": ""}, {"type": "支出", "datetime": "2026-05-28T18:40:39", "account": "陽信 2500固定支出 摩托車保險", "amount": -5000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-05-28T18:40:39", "account": "陽信 2500固定支出 摩托車保險", "amount": -12.0, "cat1": "手續費", "cat2": "轉帳手續費", "note": ""}, {"type": "收入", "datetime": "2026-05-28T18:40:39", "account": "中信 吃喝雜支 218-83=135", "amount": 5000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-05-28T18:40:16", "account": "中信 吃喝雜支 218-83=135", "amount": -795.0, "cat1": "交通", "cat2": "其他交通", "note": "高雄"}, {"type": "支出", "datetime": "2026-05-28T17:59:53", "account": "未指定帳戶(現金)", "amount": -200.0, "cat1": "交通", "cat2": "火車", "note": ""}, {"type": "支出", "datetime": "2026-05-28T16:59:07", "account": "未指定帳戶(現金)", "amount": -185.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-28T14:18:56", "account": "中信 吃喝雜支 218-83=135", "amount": -95.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-05-28T13:52:17", "account": "中信 吃喝雜支 218-83=135", "amount": -100.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-05-27T21:17:15", "account": "中信 吃喝雜支 218-83=135", "amount": -336.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-27T08:53:51", "account": "中信 吃喝雜支 218-83=135", "amount": -179.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-05-26T21:09:01", "account": "未指定帳戶(現金)", "amount": -80.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-26T16:33:44", "account": "中信 吃喝雜支 218-83=135", "amount": -306.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-05-26T13:55:54", "account": "中信 吃喝雜支 218-83=135", "amount": -890.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-05-25T19:30:32", "account": "中信 吃喝雜支 218-83=135", "amount": -140.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-25T19:29:50", "account": "中信 吃喝雜支 218-83=135", "amount": -613.0, "cat1": "醫療", "cat2": "藥品", "note": "GABA"}, {"type": "支出", "datetime": "2026-05-25T08:05:57", "account": "陽信 2500固定支出 摩托車保險", "amount": -1489.0, "cat1": "生活", "cat2": "手機話費", "note": ""}, {"type": "支出", "datetime": "2026-05-24T16:50:17", "account": "中信 吃喝雜支 218-83=135", "amount": -795.0, "cat1": "交通", "cat2": "其他交通", "note": "高雄"}, {"type": "支出", "datetime": "2026-05-24T11:19:51", "account": "中信 吃喝雜支 218-83=135", "amount": -250.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-05-23T17:46:40", "account": "未指定帳戶(現金)", "amount": -120.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-23T12:25:53", "account": "陽信 2500固定支出 摩托車保險", "amount": -3000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-05-23T12:25:53", "account": "未指定帳戶(現金)", "amount": 3000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-05-23T12:24:33", "account": "未指定帳戶(現金)", "amount": -500.0, "cat1": "交通", "cat2": "火車", "note": ""}, {"type": "支出", "datetime": "2026-05-23T09:32:14", "account": "中信 吃喝雜支 218-83=135", "amount": -281.0, "cat1": "購物", "cat2": "其他購物", "note": "皮克敏"}, {"type": "支出", "datetime": "2026-05-22T19:28:07", "account": "未指定帳戶(現金)", "amount": -460.0, "cat1": "醫療", "cat2": "藥品", "note": ""}, {"type": "支出", "datetime": "2026-05-22T18:54:36", "account": "中信 吃喝雜支 218-83=135", "amount": -87.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-22T16:35:11", "account": "中信 吃喝雜支 218-83=135", "amount": -30.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-05-22T11:09:26", "account": "中信 吃喝雜支 218-83=135", "amount": -632.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-05-22T11:07:30", "account": "中信 吃喝雜支 218-83=135", "amount": -780.0, "cat1": "購物", "cat2": "其他購物", "note": "瑜珈褲"}, {"type": "支出", "datetime": "2026-05-22T11:06:14", "account": "中信 吃喝雜支 218-83=135", "amount": -870.0, "cat1": "購物", "cat2": "其他購物", "note": "拍立得底片"}, {"type": "支出", "datetime": "2026-05-22T11:05:05", "account": "中信 吃喝雜支 218-83=135", "amount": -2366.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-05-22T11:05:05", "account": "未指定帳戶(現金)", "amount": 2366.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-05-22T09:28:11", "account": "中信 吃喝雜支 218-83=135", "amount": -82.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-05-21T18:32:32", "account": "中信 吃喝雜支 218-83=135", "amount": -147.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-21T09:16:27", "account": "中信 吃喝雜支 218-83=135", "amount": -13.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-05-20T21:17:05", "account": "中信 吃喝雜支 218-83=135", "amount": -200.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-20T15:27:03", "account": "中信 吃喝雜支 218-83=135", "amount": -60.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-05-20T12:30:06", "account": "中信 吃喝雜支 218-83=135", "amount": -250.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-20T12:29:52", "account": "中信 吃喝雜支 218-83=135", "amount": -1094.0, "cat1": "醫療", "cat2": "藥品", "note": "保健品"}, {"type": "支出", "datetime": "2026-05-19T21:38:22", "account": "陽信 2500固定支出 摩托車保險", "amount": -7000.0, "cat1": "轉帳", "cat2": "轉帳", "note": "訂金"}, {"type": "支出", "datetime": "2026-05-19T21:38:22", "account": "陽信 2500固定支出 摩托車保險", "amount": -12.0, "cat1": "手續費", "cat2": "轉帳手續費", "note": "訂金"}, {"type": "支出", "datetime": "2026-05-19T14:57:05", "account": "中信 吃喝雜支 218-83=135", "amount": -65.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-05-17T19:56:05", "account": "中信 吃喝雜支 218-83=135", "amount": -84.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-05-17T18:29:17", "account": "未指定帳戶(現金)", "amount": -914.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-05-17T18:29:17", "account": "中信 吃喝雜支 218-83=135", "amount": 914.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-05-17T18:28:47", "account": "未指定帳戶(現金)", "amount": -296.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-17T15:58:43", "account": "未指定帳戶(現金)", "amount": -2288.0, "cat1": "學習", "cat2": "其他學習", "note": "健身"}, {"type": "支出", "datetime": "2026-05-17T15:25:38", "account": "未指定帳戶(現金)", "amount": -85.0, "cat1": "交通", "cat2": "阿菱菱的車車", "note": ""}, {"type": "支出", "datetime": "2026-05-17T15:16:41", "account": "中信 吃喝雜支 218-83=135", "amount": -1000.0, "cat1": "購物", "cat2": "衣服鞋子", "note": "美甲"}, {"type": "收入", "datetime": "2026-05-17T12:26:32", "account": "中信 吃喝雜支 218-83=135", "amount": 6000.0, "cat1": "收入", "cat2": "獎金", "note": "廟 獎學金"}, {"type": "支出", "datetime": "2026-05-17T10:41:25", "account": "中信 吃喝雜支 218-83=135", "amount": -350.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-05-16T18:44:48", "account": "中信 吃喝雜支 218-83=135", "amount": -495.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-16T13:56:18", "account": "中信 吃喝雜支 218-83=135", "amount": -172.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-05-16T13:54:30", "account": "中信 吃喝雜支 218-83=135", "amount": -1027.0, "cat1": "購物", "cat2": "其他購物", "note": "買衣服 鞋子"}, {"type": "支出", "datetime": "2026-05-15T23:48:17", "account": "中信 吃喝雜支 218-83=135", "amount": -254.0, "cat1": "購物", "cat2": "其他購物", "note": "BOBO飲料提袋"}, {"type": "支出", "datetime": "2026-05-15T23:48:10", "account": "中信 吃喝雜支 218-83=135", "amount": -330.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-15T20:40:37", "account": "未指定帳戶(現金)", "amount": -237.0, "cat1": "購物", "cat2": "其他購物", "note": "餅乾"}, {"type": "支出", "datetime": "2026-05-15T14:04:22", "account": "中信 吃喝雜支 218-83=135", "amount": -3000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-05-15T14:04:22", "account": "群益 6000", "amount": 3000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-05-15T14:01:51", "account": "中信 吃喝雜支 218-83=135", "amount": -3000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-05-15T14:01:51", "account": "群益 6000", "amount": 3000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-05-15T07:54:34", "account": "中信 吃喝雜支 218-83=135", "amount": -25000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-05-15T07:54:34", "account": "陽信 2500固定支出 摩托車保險", "amount": 25000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-05-14T22:05:27", "account": "未指定帳戶(現金)", "amount": -254.0, "cat1": "購物", "cat2": "其他購物", "note": "去自筆 口腔噴霧"}, {"type": "支出", "datetime": "2026-05-14T20:14:02", "account": "中信 吃喝雜支 218-83=135", "amount": -219.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-14T00:08:06", "account": "中信 吃喝雜支 218-83=135", "amount": -625.0, "cat1": "購物", "cat2": "衣服鞋子", "note": ""}, {"type": "支出", "datetime": "2026-05-13T22:57:58", "account": "中信 吃喝雜支 218-83=135", "amount": -850.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-13T09:18:19", "account": "中信 吃喝雜支 218-83=135", "amount": -61.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-05-12T21:16:29", "account": "中信 吃喝雜支 218-83=135", "amount": -817.0, "cat1": "生活", "cat2": "生活用品", "note": "雨衣"}, {"type": "支出", "datetime": "2026-05-12T19:54:22", "account": "中信 吃喝雜支 218-83=135", "amount": -80.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-05-12T18:57:24", "account": "中信 吃喝雜支 218-83=135", "amount": -150.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-11T19:37:25", "account": "中信 吃喝雜支 218-83=135", "amount": -92.0, "cat1": "交通", "cat2": "阿菱菱的車車", "note": ""}, {"type": "支出", "datetime": "2026-05-11T19:37:11", "account": "中信 吃喝雜支 218-83=135", "amount": -1089.0, "cat1": "生活", "cat2": "生活用品", "note": "隱眼"}, {"type": "支出", "datetime": "2026-05-11T18:21:12", "account": "中信 吃喝雜支 218-83=135", "amount": -33.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-05-11T09:19:11", "account": "中信 吃喝雜支 218-83=135", "amount": -36.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-05-10T20:08:31", "account": "中信 吃喝雜支 218-83=135", "amount": -369.0, "cat1": "生活", "cat2": "毛線", "note": ""}, {"type": "收入", "datetime": "2026-05-10T19:42:24", "account": "中信 吃喝雜支 218-83=135", "amount": 30000.0, "cat1": "收入", "cat2": "紅包", "note": ""}, {"type": "收入", "datetime": "2026-05-10T19:42:18", "account": "未指定帳戶(現金)", "amount": 3000.0, "cat1": "收入", "cat2": "其他收入", "note": ""}, {"type": "支出", "datetime": "2026-05-10T19:41:55", "account": "未指定帳戶(現金)", "amount": -798.0, "cat1": "生活", "cat2": "毛線", "note": ""}, {"type": "支出", "datetime": "2026-05-10T19:41:44", "account": "未指定帳戶(現金)", "amount": -284.0, "cat1": "生活", "cat2": "曾先生", "note": ""}, {"type": "支出", "datetime": "2026-05-10T14:16:19", "account": "中信 吃喝雜支 218-83=135", "amount": -870.0, "cat1": "生活", "cat2": "生活用品", "note": "拍立得底片"}, {"type": "支出", "datetime": "2026-05-10T13:16:19", "account": "中信 吃喝雜支 218-83=135", "amount": -203.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-05-10T13:12:23", "account": "中信 吃喝雜支 218-83=135", "amount": -1000.0, "cat1": "娛樂", "cat2": "其他娛樂", "note": "做戒指"}, {"type": "支出", "datetime": "2026-05-10T00:02:35", "account": "中信 吃喝雜支 218-83=135", "amount": -590.0, "cat1": "吃喝", "cat2": "早餐", "note": "蛋白棒 開心果"}, {"type": "支出", "datetime": "2026-05-09T21:51:38", "account": "中信 吃喝雜支 218-83=135", "amount": -159.0, "cat1": "生活", "cat2": "生活用品", "note": "洗衣袋"}, {"type": "支出", "datetime": "2026-05-09T19:05:21", "account": "中信 吃喝雜支 218-83=135", "amount": -267.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-09T17:11:31", "account": "中信 吃喝雜支 218-83=135", "amount": -174.0, "cat1": "生活", "cat2": "其他生活", "note": "識別證卡"}, {"type": "支出", "datetime": "2026-05-09T17:03:08", "account": "中信 吃喝雜支 218-83=135", "amount": -280.0, "cat1": "生活", "cat2": "生活用品", "note": "睡眠噴霧"}, {"type": "支出", "datetime": "2026-05-09T11:56:35", "account": "中信 吃喝雜支 218-83=135", "amount": -110.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-05-08T22:12:45", "account": "未指定帳戶(現金)", "amount": -300.0, "cat1": "娛樂", "cat2": "其他娛樂", "note": "刮刮樂"}, {"type": "支出", "datetime": "2026-05-08T21:46:15", "account": "未指定帳戶(現金)", "amount": -1218.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-08T07:57:12", "account": "中信 吃喝雜支 218-83=135", "amount": -1201.0, "cat1": "生活", "cat2": "生活用品", "note": "牙刷刷頭跟衛生棉褲"}, {"type": "支出", "datetime": "2026-05-07T19:53:06", "account": "中信 吃喝雜支 218-83=135", "amount": -186.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-07T13:07:38", "account": "中信 吃喝雜支 218-83=135", "amount": -5000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-05-07T13:07:38", "account": "未指定帳戶(現金)", "amount": 5000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-05-07T13:07:20", "account": "未指定帳戶(現金)", "amount": -2081.0, "cat1": "醫療", "cat2": "藥品", "note": "小熊"}, {"type": "支出", "datetime": "2026-05-06T19:21:08", "account": "未指定帳戶(現金)", "amount": -85.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-05-06T19:03:15", "account": "未指定帳戶(現金)", "amount": -195.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-05T18:25:53", "account": "未指定帳戶(現金)", "amount": -160.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-05T17:15:13", "account": "中信 吃喝雜支 218-83=135", "amount": -70.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-05-05T10:05:17", "account": "中信 吃喝雜支 218-83=135", "amount": -1983.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-05-05T10:05:17", "account": "郵局 生活餘額 旅遊預存2500", "amount": 1983.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-05-05T10:03:55", "account": "中信 吃喝雜支 218-83=135", "amount": -4913.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-05-05T10:03:55", "account": "陽信 2500固定支出 摩托車保險", "amount": 4913.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-05-05T09:52:02", "account": "郵局 生活餘額 旅遊預存2500", "amount": 38.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-05-05T09:51:52", "account": "未指定帳戶(現金)", "amount": -164.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-05-05T09:40:24", "account": "中信 吃喝雜支 218-83=135", "amount": -720.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "收入", "datetime": "2026-05-05T09:40:13", "account": "中信 吃喝雜支 218-83=135", "amount": 31200.0, "cat1": "收入", "cat2": "工資", "note": ""}, {"type": "支出", "datetime": "2026-05-04T18:54:53", "account": "未指定帳戶(現金)", "amount": -100.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-04T09:14:48", "account": "中信 吃喝雜支 218-83=135", "amount": -11.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-05-03T13:26:00", "account": "中信 吃喝雜支 218-83=135", "amount": -300.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-05-03T10:22:18", "account": "未指定帳戶(現金)", "amount": -235.0, "cat1": "吃喝", "cat2": "飲品", "note": "咖啡"}, {"type": "支出", "datetime": "2026-05-02T23:36:19", "account": "郵局 生活餘額 旅遊預存2500", "amount": -500.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-05-02T23:36:19", "account": "郵局 生活餘額 旅遊預存2500", "amount": -12.0, "cat1": "手續費", "cat2": "轉帳手續費", "note": ""}, {"type": "收入", "datetime": "2026-05-02T23:36:19", "account": "中信 吃喝雜支 218-83=135", "amount": 500.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-05-02T21:13:56", "account": "未指定帳戶(現金)", "amount": -245.0, "cat1": "吃喝", "cat2": "晚餐", "note": "川牛木石亭"}, {"type": "支出", "datetime": "2026-05-02T20:54:27", "account": "未指定帳戶(現金)", "amount": -360.0, "cat1": "生活", "cat2": "其他生活", "note": "隱眼"}, {"type": "支出", "datetime": "2026-05-02T12:59:16", "account": "未指定帳戶(現金)", "amount": -240.0, "cat1": "吃喝", "cat2": "點心", "note": "咖啡"}, {"type": "支出", "datetime": "2026-05-02T12:04:09", "account": "郵局 生活餘額 旅遊預存2500", "amount": -2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-05-02T12:04:09", "account": "未指定帳戶(現金)", "amount": 2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-05-02T12:01:52", "account": "未指定帳戶(現金)", "amount": -166.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-05-01T21:45:17", "account": "未指定帳戶(現金)", "amount": -145.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-05-01T18:49:56", "account": "未指定帳戶(現金)", "amount": -700.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-05-01T18:49:33", "account": "中信 吃喝雜支 218-83=135", "amount": -303.0, "cat1": "購物", "cat2": "其他購物", "note": "買衣服"}, {"type": "支出", "datetime": "2026-04-30T21:34:34", "account": "中信 吃喝雜支 218-83=135", "amount": -388.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-04-30T21:32:28", "account": "陽信 2500固定支出 摩托車保險", "amount": -400.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-04-30T21:32:28", "account": "中信 吃喝雜支 218-83=135", "amount": 400.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-04-29T21:24:11", "account": "中信 吃喝雜支 218-83=135", "amount": -49.0, "cat1": "生活", "cat2": "其他生活", "note": "鞋刷"}, {"type": "支出", "datetime": "2026-04-29T09:26:37", "account": "郵局 生活餘額 旅遊預存2500", "amount": -24.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "收入", "datetime": "2026-04-29T08:39:02", "account": "郵局 生活餘額 旅遊預存2500", "amount": 2548.0, "cat1": "收入", "cat2": "其他收入", "note": ""}, {"type": "支出", "datetime": "2026-04-28T20:08:35", "account": "未指定帳戶(現金)", "amount": -140.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-04-28T18:41:32", "account": "中信 吃喝雜支 218-83=135", "amount": -96.0, "cat1": "交通", "cat2": "阿菱菱的車車", "note": ""}, {"type": "支出", "datetime": "2026-04-28T18:35:02", "account": "未指定帳戶(現金)", "amount": -505.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-04-28T18:34:44", "account": "未指定帳戶(現金)", "amount": -55.0, "cat1": "購物", "cat2": "其他購物", "note": ""}, {"type": "支出", "datetime": "2026-04-28T18:34:37", "account": "中信 吃喝雜支 218-83=135", "amount": -1000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-04-28T18:34:37", "account": "未指定帳戶(現金)", "amount": 1000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-04-28T16:34:46", "account": "中信 吃喝雜支 218-83=135", "amount": -11.0, "cat1": "吃喝", "cat2": "其他吃喝", "note": ""}, {"type": "支出", "datetime": "2026-04-27T21:08:43", "account": "未指定帳戶(現金)", "amount": -260.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-04-27T18:38:35", "account": "未指定帳戶(現金)", "amount": -180.0, "cat1": "生活", "cat2": "其他生活", "note": ""}, {"type": "支出", "datetime": "2026-04-26T18:41:30", "account": "未指定帳戶(現金)", "amount": -260.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-04-26T11:55:00", "account": "陽信 2500固定支出 摩托車保險", "amount": -1500.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-04-26T11:55:00", "account": "陽信 2500固定支出 摩托車保險", "amount": -12.0, "cat1": "手續費", "cat2": "轉帳手續費", "note": ""}, {"type": "收入", "datetime": "2026-04-26T11:55:00", "account": "中信 吃喝雜支 218-83=135", "amount": 1500.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-04-26T11:53:44", "account": "中信 吃喝雜支 218-83=135", "amount": -429.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-04-25T18:29:36", "account": "未指定帳戶(現金)", "amount": -672.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-04-25T12:58:18", "account": "中信 吃喝雜支 218-83=135", "amount": -209.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-04-25T11:36:44", "account": "中信 吃喝雜支 218-83=135", "amount": -80.0, "cat1": "交通", "cat2": "阿菱菱的車車", "note": ""}, {"type": "支出", "datetime": "2026-04-24T16:44:37", "account": "中信 吃喝雜支 218-83=135", "amount": -25.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-04-23T20:19:13", "account": "中信 吃喝雜支 218-83=135", "amount": -260.0, "cat1": "吃喝", "cat2": "晚餐", "note": "小時候牛排"}, {"type": "支出", "datetime": "2026-04-22T19:14:50", "account": "未指定帳戶(現金)", "amount": -200.0, "cat1": "醫療", "cat2": "其他醫療", "note": "腳"}, {"type": "支出", "datetime": "2026-04-22T16:14:09", "account": "未指定帳戶(現金)", "amount": -70.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-04-22T09:22:09", "account": "中信 吃喝雜支 218-83=135", "amount": -24.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-04-21T19:19:32", "account": "中信 吃喝雜支 218-83=135", "amount": -145.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-04-21T09:16:42", "account": "中信 吃喝雜支 218-83=135", "amount": -25.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-04-20T21:18:19", "account": "中信 吃喝雜支 218-83=135", "amount": -162.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-04-20T18:25:07", "account": "中信 吃喝雜支 218-83=135", "amount": -25.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-04-20T09:13:04", "account": "中信 吃喝雜支 218-83=135", "amount": -11.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-04-19T17:26:01", "account": "未指定帳戶(現金)", "amount": -600.0, "cat1": "生活", "cat2": "曾先生", "note": "開房間"}, {"type": "支出", "datetime": "2026-04-19T17:24:58", "account": "中信 吃喝雜支 218-83=135", "amount": -53.0, "cat1": "交通", "cat2": "其他交通", "note": "Go share"}, {"type": "支出", "datetime": "2026-04-19T11:07:50", "account": "中信 吃喝雜支 218-83=135", "amount": -364.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "收入", "datetime": "2026-04-19T09:54:08", "account": "未指定帳戶(現金)", "amount": 2068.0, "cat1": "收入", "cat2": "紅包", "note": ""}, {"type": "支出", "datetime": "2026-04-18T15:54:51", "account": "中信 吃喝雜支 218-83=135", "amount": -70.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-04-18T15:53:03", "account": "未指定帳戶(現金)", "amount": -99.0, "cat1": "生活", "cat2": "生活用品", "note": "保養液"}, {"type": "支出", "datetime": "2026-04-18T15:52:56", "account": "未指定帳戶(現金)", "amount": -299.0, "cat1": "購物", "cat2": "其他購物", "note": "香水"}, {"type": "支出", "datetime": "2026-04-18T15:37:23", "account": "未指定帳戶(現金)", "amount": -109.0, "cat1": "購物", "cat2": "其他購物", "note": "雙眼皮貼"}, {"type": "支出", "datetime": "2026-04-18T14:43:00", "account": "未指定帳戶(現金)", "amount": -150.0, "cat1": "醫療", "cat2": "其他醫療", "note": "牙醫"}, {"type": "支出", "datetime": "2026-04-18T12:16:18", "account": "中信 吃喝雜支 218-83=135", "amount": -200.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-04-18T12:10:32", "account": "中信 吃喝雜支 218-83=135", "amount": -1002.0, "cat1": "生活", "cat2": "手機話費", "note": ""}, {"type": "支出", "datetime": "2026-04-18T12:07:21", "account": "中信 吃喝雜支 218-83=135", "amount": -225.0, "cat1": "購物", "cat2": "其他購物", "note": "杯子"}, {"type": "支出", "datetime": "2026-04-17T19:36:13", "account": "未指定帳戶(現金)", "amount": -500.0, "cat1": "交通", "cat2": "火車", "note": ""}, {"type": "支出", "datetime": "2026-04-17T19:35:56", "account": "中信 吃喝雜支 218-83=135", "amount": -20.0, "cat1": "吃喝", "cat2": "飲品", "note": "水"}, {"type": "支出", "datetime": "2026-04-17T19:08:30", "account": "未指定帳戶(現金)", "amount": -65.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-04-17T18:53:40", "account": "未指定帳戶(現金)", "amount": -200.0, "cat1": "醫療", "cat2": "其他醫療", "note": ""}, {"type": "支出", "datetime": "2026-04-17T14:12:12", "account": "中信 吃喝雜支 218-83=135", "amount": -370.0, "cat1": "購物", "cat2": "其他購物", "note": "皮克敏娃娃"}, {"type": "支出", "datetime": "2026-04-16T18:21:30", "account": "未指定帳戶(現金)", "amount": -171.0, "cat1": "購物", "cat2": "其他購物", "note": "分裝瓶"}, {"type": "支出", "datetime": "2026-04-16T18:15:09", "account": "中信 吃喝雜支 218-83=135", "amount": -2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-04-16T18:15:09", "account": "未指定帳戶(現金)", "amount": 2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-04-15T19:46:15", "account": "中信 吃喝雜支 218-83=135", "amount": -230.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-04-15T16:16:31", "account": "中信 吃喝雜支 218-83=135", "amount": -11.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-04-15T09:14:19", "account": "中信 吃喝雜支 218-83=135", "amount": -11.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-04-14T21:43:43", "account": "中信 吃喝雜支 218-83=135", "amount": -158.0, "cat1": "生活", "cat2": "家政", "note": "牙尖刷"}, {"type": "支出", "datetime": "2026-04-14T18:59:41", "account": "未指定帳戶(現金)", "amount": -100.0, "cat1": "吃喝", "cat2": "水果", "note": ""}, {"type": "支出", "datetime": "2026-04-14T18:47:24", "account": "中信 吃喝雜支 218-83=135", "amount": -400.0, "cat1": "學習", "cat2": "其他學習", "note": "普拉提"}, {"type": "支出", "datetime": "2026-04-14T18:20:55", "account": "未指定帳戶(現金)", "amount": -100.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-04-13T19:40:20", "account": "中信 吃喝雜支 218-83=135", "amount": -89.0, "cat1": "交通", "cat2": "阿菱菱的車車", "note": ""}, {"type": "支出", "datetime": "2026-04-13T19:18:07", "account": "未指定帳戶(現金)", "amount": -160.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-04-13T19:00:54", "account": "未指定帳戶(現金)", "amount": -200.0, "cat1": "醫療", "cat2": "其他醫療", "note": "腳"}, {"type": "支出", "datetime": "2026-04-13T09:27:43", "account": "中信 吃喝雜支 218-83=135", "amount": -11.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-04-12T20:30:02", "account": "中信 吃喝雜支 218-83=135", "amount": -42.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-04-12T20:24:04", "account": "未指定帳戶(現金)", "amount": -440.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-04-12T13:25:46", "account": "未指定帳戶(現金)", "amount": -179.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-04-12T13:24:47", "account": "中信 吃喝雜支 218-83=135", "amount": -395.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-04-11T20:32:03", "account": "陽信 2500固定支出 摩托車保險", "amount": -1086.0, "cat1": "購物", "cat2": "衣服鞋子", "note": ""}, {"type": "支出", "datetime": "2026-04-11T19:31:47", "account": "未指定帳戶(現金)", "amount": -193.0, "cat1": "交通", "cat2": "火車", "note": ""}, {"type": "支出", "datetime": "2026-04-11T17:53:15", "account": "未指定帳戶(現金)", "amount": -520.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-04-11T17:44:41", "account": "未指定帳戶(現金)", "amount": -85.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-04-11T17:18:54", "account": "中信 吃喝雜支 218-83=135", "amount": -2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-04-11T17:18:54", "account": "未指定帳戶(現金)", "amount": 2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-04-11T16:41:25", "account": "中信 吃喝雜支 218-83=135", "amount": -508.0, "cat1": "購物", "cat2": "衣服鞋子", "note": ""}, {"type": "支出", "datetime": "2026-04-11T15:36:38", "account": "未指定帳戶(現金)", "amount": -50.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-04-11T15:33:09", "account": "中信 吃喝雜支 218-83=135", "amount": -40.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-04-11T11:20:38", "account": "未指定帳戶(現金)", "amount": -110.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-04-11T11:08:53", "account": "未指定帳戶(現金)", "amount": -236.0, "cat1": "醫療", "cat2": "藥品", "note": "腳"}, {"type": "支出", "datetime": "2026-04-10T21:15:36", "account": "未指定帳戶(現金)", "amount": -170.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-04-10T15:38:56", "account": "中信 吃喝雜支 218-83=135", "amount": -69.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-04-10T13:16:59", "account": "中信 吃喝雜支 218-83=135", "amount": -378.0, "cat1": "吃喝", "cat2": "飲品", "note": "果汁"}, {"type": "支出", "datetime": "2026-04-10T09:15:05", "account": "中信 吃喝雜支 218-83=135", "amount": -49.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-04-09T20:15:55", "account": "中信 吃喝雜支 218-83=135", "amount": -167.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-04-09T17:22:34", "account": "中信 吃喝雜支 218-83=135", "amount": -30.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-04-09T17:08:31", "account": "中信 吃喝雜支 218-83=135", "amount": -100.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-04-09T09:09:07", "account": "未指定帳戶(現金)", "amount": -43.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-04-08T20:40:36", "account": "中信 吃喝雜支 218-83=135", "amount": -800.0, "cat1": "醫療", "cat2": "藥品", "note": "事前"}, {"type": "支出", "datetime": "2026-04-08T19:27:04", "account": "中信 吃喝雜支 218-83=135", "amount": -145.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-04-08T09:11:18", "account": "中信 吃喝雜支 218-83=135", "amount": -11.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-04-07T20:44:43", "account": "未指定帳戶(現金)", "amount": -80.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-04-06T21:59:05", "account": "未指定帳戶(現金)", "amount": -70.0, "cat1": "吃喝", "cat2": "宵夜", "note": ""}, {"type": "支出", "datetime": "2026-04-06T18:01:24", "account": "中信 吃喝雜支 218-83=135", "amount": -1040.0, "cat1": "交通", "cat2": "其他交通", "note": "保險"}, {"type": "支出", "datetime": "2026-04-06T11:55:37", "account": "未指定帳戶(現金)", "amount": -45.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-04-06T11:37:28", "account": "未指定帳戶(現金)", "amount": -100.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-04-05T15:48:36", "account": "中信 吃喝雜支 218-83=135", "amount": -180.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-04-05T11:36:51", "account": "未指定帳戶(現金)", "amount": -109.0, "cat1": "學習", "cat2": "繪畫", "note": "文具"}, {"type": "支出", "datetime": "2026-04-05T11:18:59", "account": "中信 吃喝雜支 218-83=135", "amount": -140.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-04-05T11:15:16", "account": "未指定帳戶(現金)", "amount": -105.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-04-04T23:57:36", "account": "中信 吃喝雜支 218-83=135", "amount": -1100.0, "cat1": "生活", "cat2": "美容美髮", "note": "美甲"}, {"type": "支出", "datetime": "2026-04-04T17:08:19", "account": "中信 吃喝雜支 218-83=135", "amount": -311.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-04-03T20:37:16", "account": "未指定帳戶(現金)", "amount": -1368.0, "cat1": "生活", "cat2": "其他生活", "note": ""}, {"type": "支出", "datetime": "2026-04-03T20:31:38", "account": "未指定帳戶(現金)", "amount": -1769.0, "cat1": "購物", "cat2": "衣服鞋子", "note": "Wave shine"}, {"type": "支出", "datetime": "2026-04-03T20:30:07", "account": "未指定帳戶(現金)", "amount": -718.0, "cat1": "購物", "cat2": "其他購物", "note": "小游"}, {"type": "支出", "datetime": "2026-04-03T20:19:52", "account": "未指定帳戶(現金)", "amount": -518.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-04-03T16:25:35", "account": "中信 吃喝雜支 218-83=135", "amount": -20.0, "cat1": "吃喝", "cat2": "飲品", "note": "水"}, {"type": "支出", "datetime": "2026-04-03T16:22:41", "account": "中信 吃喝雜支 218-83=135", "amount": -79.0, "cat1": "交通", "cat2": "阿菱菱的車車", "note": ""}, {"type": "支出", "datetime": "2026-04-03T16:22:33", "account": "中信 吃喝雜支 218-83=135", "amount": -100.0, "cat1": "娛樂", "cat2": "其他娛樂", "note": "草莓"}, {"type": "支出", "datetime": "2026-04-03T12:19:57", "account": "中信 吃喝雜支 218-83=135", "amount": -265.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-04-03T12:04:56", "account": "中信 吃喝雜支 218-83=135", "amount": -2714.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-04-03T12:04:56", "account": "陽信 2500固定支出 摩托車保險", "amount": 2714.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-04-03T12:04:47", "account": "中信 吃喝雜支 218-83=135", "amount": -2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-04-03T12:04:47", "account": "群益 6000", "amount": 2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-04-03T12:02:50", "account": "中信 吃喝雜支 218-83=135", "amount": -5000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-04-03T12:02:50", "account": "未指定帳戶(現金)", "amount": 5000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-04-02T17:13:54", "account": "中信 吃喝雜支 218-83=135", "amount": -80.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-04-02T10:59:07", "account": "中信 吃喝雜支 218-83=135", "amount": -3000.0, "cat1": "歸還", "cat2": "歸還", "note": ""}, {"type": "支出", "datetime": "2026-04-02T10:58:59", "account": "中信 吃喝雜支 218-83=135", "amount": -1000.0, "cat1": "歸還", "cat2": "歸還", "note": ""}, {"type": "收入", "datetime": "2026-04-02T10:48:35", "account": "中信 吃喝雜支 218-83=135", "amount": 28261.0, "cat1": "收入", "cat2": "工資", "note": ""}, {"type": "支出", "datetime": "2026-04-02T10:48:21", "account": "未指定帳戶(現金)", "amount": -101.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-04-02T10:48:04", "account": "中信 吃喝雜支 218-83=135", "amount": -31.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-04-02T10:47:46", "account": "陽信 2500固定支出 摩托車保險", "amount": -64.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-04-01T21:06:20", "account": "未指定帳戶(現金)", "amount": -55.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-04-01T18:49:43", "account": "未指定帳戶(現金)", "amount": -168.0, "cat1": "吃喝", "cat2": "晚餐", "note": "麥當勞"}, {"type": "支出", "datetime": "2026-04-01T09:09:17", "account": "未指定帳戶(現金)", "amount": -13.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-03-31T18:57:54", "account": "未指定帳戶(現金)", "amount": -35.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-03-31T18:18:30", "account": "未指定帳戶(現金)", "amount": -70.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-31T09:16:14", "account": "中信 吃喝雜支 218-83=135", "amount": -13.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-03-30T19:54:57", "account": "中信 吃喝雜支 218-83=135", "amount": -215.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-29T21:42:28", "account": "未指定帳戶(現金)", "amount": -60.0, "cat1": "購物", "cat2": "其他購物", "note": ""}, {"type": "支出", "datetime": "2026-03-29T18:34:22", "account": "未指定帳戶(現金)", "amount": -140.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-29T18:04:53", "account": "中信 吃喝雜支 218-83=135", "amount": -238.0, "cat1": "交通", "cat2": "火車", "note": ""}, {"type": "支出", "datetime": "2026-03-29T15:34:22", "account": "中信 吃喝雜支 218-83=135", "amount": -110.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-03-29T14:55:52", "account": "未指定帳戶(現金)", "amount": -110.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "收入", "datetime": "2026-03-29T14:50:41", "account": "未指定帳戶(現金)", "amount": 1000.0, "cat1": "借入", "cat2": "借入", "note": ""}, {"type": "收入", "datetime": "2026-03-29T14:45:20", "account": "中信 吃喝雜支 218-83=135", "amount": 70.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-03-29T14:43:50", "account": "未指定帳戶(現金)", "amount": -550.0, "cat1": "生活", "cat2": "毛線", "note": "毛線"}, {"type": "支出", "datetime": "2026-03-29T12:29:27", "account": "未指定帳戶(現金)", "amount": -50.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-03-29T12:27:46", "account": "未指定帳戶(現金)", "amount": -110.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-03-28T23:56:00", "account": "中信 吃喝雜支 218-83=135", "amount": -183.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-28T16:41:13", "account": "未指定帳戶(現金)", "amount": -135.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-03-28T13:45:32", "account": "未指定帳戶(現金)", "amount": -649.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-03-28T12:12:35", "account": "未指定帳戶(現金)", "amount": -300.0, "cat1": "交通", "cat2": "火車", "note": ""}, {"type": "支出", "datetime": "2026-03-28T10:29:27", "account": "中信 吃喝雜支 218-83=135", "amount": -110.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-03-27T20:26:21", "account": "中信 吃喝雜支 218-83=135", "amount": -84.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-03-27T20:12:51", "account": "未指定帳戶(現金)", "amount": -270.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-27T11:40:58", "account": "未指定帳戶(現金)", "amount": -150.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-03-26T19:14:36", "account": "中信 吃喝雜支 218-83=135", "amount": -95.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-25T21:22:19", "account": "未指定帳戶(現金)", "amount": -65.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-03-25T21:22:19", "account": "中信 吃喝雜支 218-83=135", "amount": 65.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-03-25T19:32:58", "account": "中信 吃喝雜支 218-83=135", "amount": -3000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-03-25T19:32:58", "account": "中信 吃喝雜支 218-83=135", "amount": -15.0, "cat1": "手續費", "cat2": "轉帳手續費", "note": ""}, {"type": "收入", "datetime": "2026-03-25T19:32:58", "account": "群益 6000", "amount": 3000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-03-25T18:19:56", "account": "未指定帳戶(現金)", "amount": -125.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-25T17:00:51", "account": "中信 吃喝雜支 218-83=135", "amount": -33.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-03-25T12:09:06", "account": "未指定帳戶(現金)", "amount": -3000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-03-25T12:09:06", "account": "中信 吃喝雜支 218-83=135", "amount": 3000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-03-24T22:33:07", "account": "未指定帳戶(現金)", "amount": 5000.0, "cat1": "收入", "cat2": "其他收入", "note": ""}, {"type": "支出", "datetime": "2026-03-24T20:34:18", "account": "未指定帳戶(現金)", "amount": -300.0, "cat1": "交通", "cat2": "其他交通", "note": ""}, {"type": "支出", "datetime": "2026-03-24T20:28:35", "account": "未指定帳戶(現金)", "amount": -660.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-23T18:35:12", "account": "未指定帳戶(現金)", "amount": -200.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-23T16:17:52", "account": "未指定帳戶(現金)", "amount": -35.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-03-22T19:25:55", "account": "未指定帳戶(現金)", "amount": -395.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-03-22T19:09:00", "account": "陽信 2500固定支出 摩托車保險", "amount": -2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": "5"}, {"type": "收入", "datetime": "2026-03-22T19:09:00", "account": "未指定帳戶(現金)", "amount": 2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": "5"}, {"type": "支出", "datetime": "2026-03-22T17:40:05", "account": "未指定帳戶(現金)", "amount": -520.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-22T15:34:34", "account": "未指定帳戶(現金)", "amount": -29.0, "cat1": "購物", "cat2": "其他購物", "note": ""}, {"type": "支出", "datetime": "2026-03-21T20:50:10", "account": "未指定帳戶(現金)", "amount": -549.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-21T20:41:35", "account": "中信 吃喝雜支 218-83=135", "amount": -82.0, "cat1": "交通", "cat2": "阿菱菱的車車", "note": ""}, {"type": "支出", "datetime": "2026-03-21T15:45:29", "account": "未指定帳戶(現金)", "amount": -569.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-03-20T21:48:54", "account": "未指定帳戶(現金)", "amount": -171.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-20T18:31:09", "account": "陽信 2500固定支出 摩托車保險", "amount": -2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-03-20T18:31:09", "account": "陽信 2500固定支出 摩托車保險", "amount": -5.0, "cat1": "手續費", "cat2": "轉帳手續費", "note": ""}, {"type": "收入", "datetime": "2026-03-20T18:31:09", "account": "未指定帳戶(現金)", "amount": 2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-03-20T15:33:40", "account": "陽信 2500固定支出 摩托車保險", "amount": 3000.0, "cat1": "借入", "cat2": "借入", "note": ""}, {"type": "支出", "datetime": "2026-03-19T18:28:30", "account": "未指定帳戶(現金)", "amount": -70.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-18T18:18:48", "account": "未指定帳戶(現金)", "amount": -75.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-17T13:18:05", "account": "未指定帳戶(現金)", "amount": -360.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-03-17T13:13:16", "account": "未指定帳戶(現金)", "amount": -410.0, "cat1": "醫療", "cat2": "藥品", "note": "看醫生"}, {"type": "支出", "datetime": "2026-03-16T18:20:10", "account": "未指定帳戶(現金)", "amount": -140.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-15T17:27:29", "account": "未指定帳戶(現金)", "amount": -480.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-15T15:38:20", "account": "未指定帳戶(現金)", "amount": -100.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-03-15T11:32:21", "account": "未指定帳戶(現金)", "amount": -310.0, "cat1": "醫療", "cat2": "藥品", "note": ""}, {"type": "支出", "datetime": "2026-03-15T11:32:14", "account": "陽信 2500固定支出 摩托車保險", "amount": -2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-03-15T11:32:14", "account": "陽信 2500固定支出 摩托車保險", "amount": -5.0, "cat1": "手續費", "cat2": "轉帳手續費", "note": ""}, {"type": "收入", "datetime": "2026-03-15T11:32:14", "account": "未指定帳戶(現金)", "amount": 2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-03-14T21:32:05", "account": "中信 吃喝雜支 218-83=135", "amount": -599.0, "cat1": "生活", "cat2": "曾先生", "note": "約會"}, {"type": "支出", "datetime": "2026-03-14T18:00:42", "account": "中信 吃喝雜支 218-83=135", "amount": -77.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-14T17:49:10", "account": "未指定帳戶(現金)", "amount": -814.0, "cat1": "生活", "cat2": "其他生活", "note": "眼罩 小燈 錶帶"}, {"type": "支出", "datetime": "2026-03-14T11:53:35", "account": "未指定帳戶(現金)", "amount": -190.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-03-14T11:48:57", "account": "未指定帳戶(現金)", "amount": -36.0, "cat1": "生活", "cat2": "其他生活", "note": "郵資"}, {"type": "支出", "datetime": "2026-03-14T11:29:44", "account": "未指定帳戶(現金)", "amount": -351.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-03-14T11:24:48", "account": "未指定帳戶(現金)", "amount": -900.0, "cat1": "生活", "cat2": "美容美髮", "note": "美甲"}, {"type": "支出", "datetime": "2026-03-14T08:38:49", "account": "陽信 2500固定支出 摩托車保險", "amount": -2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-03-14T08:38:49", "account": "未指定帳戶(現金)", "amount": 2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-03-13T18:30:23", "account": "中信 吃喝雜支 218-83=135", "amount": -192.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-13T18:16:33", "account": "中信 吃喝雜支 218-83=135", "amount": -20.0, "cat1": "生活", "cat2": "其他生活", "note": "信封"}, {"type": "支出", "datetime": "2026-03-12T20:11:55", "account": "中信 吃喝雜支 218-83=135", "amount": -1162.0, "cat1": "生活", "cat2": "曾先生", "note": ""}, {"type": "支出", "datetime": "2026-03-12T18:10:53", "account": "未指定帳戶(現金)", "amount": -35.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-03-11T19:16:49", "account": "中信 吃喝雜支 218-83=135", "amount": -11.0, "cat1": "購物", "cat2": "其他購物", "note": ""}, {"type": "支出", "datetime": "2026-03-11T16:01:35", "account": "中信 吃喝雜支 218-83=135", "amount": -30.0, "cat1": "吃喝", "cat2": "點心", "note": ""}, {"type": "支出", "datetime": "2026-03-11T14:09:22", "account": "中信 吃喝雜支 218-83=135", "amount": -1090.0, "cat1": "旅行", "cat2": "住宿", "note": "頭份 小狗"}, {"type": "支出", "datetime": "2026-03-11T13:20:42", "account": "中信 吃喝雜支 218-83=135", "amount": -70.0, "cat1": "學習", "cat2": "其他學習", "note": "申請證明"}, {"type": "支出", "datetime": "2026-03-11T10:09:00", "account": "中信 吃喝雜支 218-83=135", "amount": -85.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-03-10T22:03:28", "account": "中信 吃喝雜支 218-83=135", "amount": -86.0, "cat1": "生活", "cat2": "生活用品", "note": "衛生紙"}, {"type": "支出", "datetime": "2026-03-10T20:09:54", "account": "中信 吃喝雜支 218-83=135", "amount": -533.0, "cat1": "更新餘額", "cat2": "更新餘額", "note": ""}, {"type": "支出", "datetime": "2026-03-10T20:09:37", "account": "中信 吃喝雜支 218-83=135", "amount": -2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-03-10T20:09:37", "account": "中信 吃喝雜支 218-83=135", "amount": -15.0, "cat1": "手續費", "cat2": "轉帳手續費", "note": ""}, {"type": "收入", "datetime": "2026-03-10T20:09:37", "account": "群益 6000", "amount": 2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-03-10T20:08:05", "account": "中信 吃喝雜支 218-83=135", "amount": -5076.0, "cat1": "生活", "cat2": "手機話費", "note": ""}, {"type": "支出", "datetime": "2026-03-10T18:40:29", "account": "未指定帳戶(現金)", "amount": -70.0, "cat1": "吃喝", "cat2": "晚餐", "note": "章魚燒"}, {"type": "支出", "datetime": "2026-03-10T18:32:56", "account": "中信 吃喝雜支 218-83=135", "amount": -35.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "收入", "datetime": "2026-03-10T18:15:40", "account": "陽信 2500固定支出 摩托車保險", "amount": 3000.0, "cat1": "收回", "cat2": "收回", "note": ""}, {"type": "支出", "datetime": "2026-03-09T20:52:52", "account": "未指定帳戶(現金)", "amount": -85.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-09T18:45:16", "account": "中信 吃喝雜支 218-83=135", "amount": -77.0, "cat1": "交通", "cat2": "阿菱菱的車車", "note": ""}, {"type": "支出", "datetime": "2026-03-08T18:30:33", "account": "未指定帳戶(現金)", "amount": -280.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-08T11:39:00", "account": "中信 吃喝雜支 218-83=135", "amount": -250.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-03-08T11:39:00", "account": "未指定帳戶(現金)", "amount": 250.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-03-08T11:38:27", "account": "中信 吃喝雜支 218-83=135", "amount": -226.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-08T10:19:30", "account": "未指定帳戶(現金)", "amount": -316.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-03-08T09:51:34", "account": "中信 吃喝雜支 218-83=135", "amount": -56.0, "cat1": "生活", "cat2": "生活用品", "note": "酷澎"}, {"type": "支出", "datetime": "2026-03-07T14:54:25", "account": "中信 吃喝雜支 218-83=135", "amount": -174.0, "cat1": "生活", "cat2": "生活用品", "note": "手錶錶帶"}, {"type": "支出", "datetime": "2026-03-07T10:24:24", "account": "中信 吃喝雜支 218-83=135", "amount": -200.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-03-06T21:26:43", "account": "未指定帳戶(現金)", "amount": -119.0, "cat1": "生活", "cat2": "生活用品", "note": "洗衣網"}, {"type": "支出", "datetime": "2026-03-06T18:45:30", "account": "中信 吃喝雜支 218-83=135", "amount": -204.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-06T18:45:23", "account": "中信 吃喝雜支 218-83=135", "amount": -215.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-03-06T18:45:23", "account": "未指定帳戶(現金)", "amount": 215.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-03-05T18:21:56", "account": "未指定帳戶(現金)", "amount": -170.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-05T18:13:51", "account": "中信 吃喝雜支 218-83=135", "amount": -39.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-03-05T12:34:36", "account": "中信 吃喝雜支 218-83=135", "amount": -34.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-03-05T11:05:35", "account": "中信 吃喝雜支 218-83=135", "amount": -1000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-03-05T11:05:35", "account": "群益 6000", "amount": 1000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-03-05T09:07:10", "account": "中信 吃喝雜支 218-83=135", "amount": -399.0, "cat1": "生活", "cat2": "手機話費", "note": "Hami 會員"}, {"type": "支出", "datetime": "2026-03-04T20:50:01", "account": "中信 吃喝雜支 218-83=135", "amount": -147.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-03-04T20:37:17", "account": "中信 吃喝雜支 218-83=135", "amount": -167.0, "cat1": "生活", "cat2": "生活用品", "note": "收納"}, {"type": "支出", "datetime": "2026-03-04T20:01:50", "account": "中信 吃喝雜支 218-83=135", "amount": -918.0, "cat1": "生活", "cat2": "生活用品", "note": "拖鞋"}, {"type": "支出", "datetime": "2026-03-04T19:28:17", "account": "未指定帳戶(現金)", "amount": -200.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-03T20:32:07", "account": "未指定帳戶(現金)", "amount": -60.0, "cat1": "吃喝", "cat2": "點心", "note": "豆花"}, {"type": "支出", "datetime": "2026-03-03T18:24:19", "account": "未指定帳戶(現金)", "amount": -140.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-03T14:45:19", "account": "中信 吃喝雜支 218-83=135", "amount": -1560.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-03-03T14:45:19", "account": "中信 吃喝雜支 218-83=135", "amount": -15.0, "cat1": "手續費", "cat2": "轉帳手續費", "note": ""}, {"type": "收入", "datetime": "2026-03-03T14:45:19", "account": "陽信 2500固定支出 摩托車保險", "amount": 1560.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-03-03T14:44:26", "account": "中信 吃喝雜支 218-83=135", "amount": -7000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-03-03T14:44:26", "account": "中信 吃喝雜支 218-83=135", "amount": -15.0, "cat1": "手續費", "cat2": "轉帳手續費", "note": ""}, {"type": "收入", "datetime": "2026-03-03T14:44:26", "account": "群益 6000", "amount": 7000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "收入", "datetime": "2026-03-03T14:42:17", "account": "中信 吃喝雜支 218-83=135", "amount": 23980.0, "cat1": "收入", "cat2": "工資", "note": ""}, {"type": "支出", "datetime": "2026-03-02T18:15:30", "account": "未指定帳戶(現金)", "amount": -45.0, "cat1": "生活", "cat2": "生活用品", "note": "小杯子"}, {"type": "支出", "datetime": "2026-03-02T18:03:07", "account": "未指定帳戶(現金)", "amount": -160.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-02T15:41:30", "account": "未指定帳戶(現金)", "amount": -1152.0, "cat1": "旅行", "cat2": "住宿", "note": "搬家"}, {"type": "收入", "datetime": "2026-03-01T20:44:06", "account": "未指定帳戶(現金)", "amount": 1000.0, "cat1": "收入", "cat2": "其他收入", "note": ""}, {"type": "支出", "datetime": "2026-03-01T19:02:22", "account": "未指定帳戶(現金)", "amount": -57.0, "cat1": "吃喝", "cat2": "早餐", "note": ""}, {"type": "支出", "datetime": "2026-03-01T18:33:44", "account": "中信 吃喝雜支 218-83=135", "amount": -407.0, "cat1": "吃喝", "cat2": "晚餐", "note": ""}, {"type": "支出", "datetime": "2026-03-01T14:09:24", "account": "中信 吃喝雜支 218-83=135", "amount": -2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-03-01T14:09:24", "account": "中信 吃喝雜支 218-83=135", "amount": -5.0, "cat1": "手續費", "cat2": "轉帳手續費", "note": ""}, {"type": "收入", "datetime": "2026-03-01T14:09:24", "account": "未指定帳戶(現金)", "amount": 2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-03-01T14:05:16", "account": "未指定帳戶(現金)", "amount": -215.0, "cat1": "吃喝", "cat2": "飲品", "note": ""}, {"type": "支出", "datetime": "2026-03-01T13:44:52", "account": "陽信 2500固定支出 摩托車保險", "amount": -1194.0, "cat1": "吃喝", "cat2": "午餐", "note": ""}, {"type": "支出", "datetime": "2026-03-01T13:44:35", "account": "中信 吃喝雜支 218-83=135", "amount": -2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-03-01T13:44:35", "account": "中信 吃喝雜支 218-83=135", "amount": -15.0, "cat1": "手續費", "cat2": "轉帳手續費", "note": ""}, {"type": "收入", "datetime": "2026-03-01T13:44:35", "account": "陽信 2500固定支出 摩托車保險", "amount": 2000.0, "cat1": "轉帳", "cat2": "轉帳", "note": ""}, {"type": "支出", "datetime": "2026-03-01T11:40:09", "account": "中信 吃喝雜支 218-83=135", "amount": -1388.0, "cat1": "醫療", "cat2": "藥品", "note": "保健品"}, {"type": "支出", "datetime": "2026-03-01T01:14:22", "account": "中信 吃喝雜支 218-83=135", "amount": -152.0, "cat1": "吃喝", "cat2": "點心", "note": "可可燕麥"}, {"type": "支出", "datetime": "2026-03-01T01:00:15", "account": "中信 吃喝雜支 218-83=135", "amount": -155.0, "cat1": "吃喝", "cat2": "點心", "note": "奇亞籽"}, {"type": "支出", "datetime": "2026-03-01T00:59:05", "account": "中信 吃喝雜支 218-83=135", "amount": -59.0, "cat1": "生活", "cat2": "生活用品", "note": "優格杯"}];
+
+  let state = { pockets:null, stocks:null, fixedExpenses:null, budgets:null, ledger:null, payday:null, goal:null, quickItems:null, lastPocketId:null };
+
+  const DEFAULT_QUICK_ITEMS = {
+    expense: [
+      {cat1:'吃喝', cat2:'晚餐'}, {cat1:'吃喝', cat2:'點心'}, {cat1:'吃喝', cat2:'飲品'}, {cat1:'吃喝', cat2:'飲料'},
+      {cat1:'吃喝', cat2:'咖啡'}, {cat1:'吃喝', cat2:'早餐'}, {cat1:'吃喝', cat2:'午餐'},
+      {cat1:'生活', cat2:'生活用品'}, {cat1:'生活', cat2:'毛線'},
+      {cat1:'交通', cat2:'火車'}, {cat1:'交通', cat2:'高鐵'}, {cat1:'交通', cat2:'阿菱菱的車車'},
+      {cat1:'醫療', cat2:'藥品'}, {cat1:'購物', cat2:'衣服鞋子'}, {cat1:'購物', cat2:'其他購物'},
+      {cat1:'多多', cat2:'其他'},
+    ],
+    income: [
+      {cat1:'收入', cat2:'工資'}, {cat1:'收入', cat2:'紅包'}, {cat1:'收入', cat2:'獎金'},
+      {cat1:'收入', cat2:'其他收入'}, {cat1:'收入', cat2:'季獎金'}, {cat1:'收入', cat2:'三節獎金'},
+    ],
+  };
+  const DEFAULT_POCKET_LABELS = {
+    '未指定帳戶(現金)': {name:'現金(未指定帳戶)', note:'', category:'cash'},
+    '中信 吃喝雜支 218-83=135': {name:'中信', note:'吃喝雜支 218-83=135', category:'cash'},
+    '陽信 2500固定支出 摩托車保險': {name:'陽信', note:'2500固定支出・摩托車保險', category:'cash'},
+    'Line 4500一次性支出 購物': {name:'Line購物', note:'4500一次性支出', category:'cash'},
+    'Line口袋帳戶 3000': {name:'緊急備用金', note:'原 Line口袋帳戶・目標 3000', category:'savings'},
+    '郵局 生活餘額 旅遊預存2500': {name:'郵局', note:'生活餘額・旅遊預存2500', category:'cash'},
+    'Line pay money': {name:'Line Pay', note:'', category:'cash'},
+    'Quokka': {name:'Quokka', note:'', category:'cash'},
+  };
+  const SEED_VERSION = 6;
+  const DEFAULT_POCKET_BALANCES = {
+    '未指定帳戶(現金)': 571,
+    '中信 吃喝雜支 218-83=135': 6645,
+    '陽信 2500固定支出 摩托車保險': 79,
+    'Line 4500一次性支出 購物': 22,
+    'Line口袋帳戶 3000': 0,
+    '郵局 生活餘額 旅遊預存2500': 0,
+    'Line pay money': 0,
+    'Quokka': 0,
+  };
+  const DEFAULT_STOCKS = [
+    {name:'0050(群益)', shares:314, cost:29802, marketValue:32546},
+  ];
+  const EXTRA_SEED_LEDGER = [
+    {type:'支出', datetime:new Date().toISOString().slice(0,19), account:'中信 吃喝雜支 218-83=135', amount:-50, cat1:'吃喝', cat2:'飲料', note:''},
+  ];
+  const DEFAULT_FIXED_EXPENSES = [
+    {name:'房租', amount:7000, account:'中信 吃喝雜支 218-83=135'},
+    {name:'健身', amount:1300, account:'中信 吃喝雜支 218-83=135'},
+    {name:'Claude', amount:700, account:'陽信 2500固定支出 摩托車保險'},
+    {name:'手機', amount:1000, account:'陽信 2500固定支出 摩托車保險'},
+  ];
+  const DEFAULT_BUDGETS = [
+    {name:'吃喝', amount:10000, account:'中信 吃喝雜支 218-83=135'},
+    {name:'交通', amount:1500, account:'中信 吃喝雜支 218-83=135'},
+    {name:'購物', amount:1000, account:'Line 4500一次性支出 購物'},
+    {name:'多多', amount:2000, account:'Line 4500一次性支出 購物'},
+    {name:'醫療', amount:1500, account:'Line 4500一次性支出 購物'},
+    {name:'生活', amount:2000, account:'Line 4500一次性支出 購物'},
+    {name:'娛樂學習', amount:500, account:'Line 4500一次性支出 購物'},
+    {name:'旅行', amount:1500, account:'Line 4500一次性支出 購物'},
+  ];
+  const CATEGORY_ALIASES = { '多多':['多多','Puli'], '娛樂學習':['娛樂學習','娛樂','學習'] };
+  const EXCLUDED_POCKET_ACCOUNTS = ['群益 6000'];
+  let modal = null;
+  let budgetView = { mode:'month', period:null, useActualMonths:false };
+  let txView = { mode:'month', period:null, group:'detail' };
+  let quickCatFilter = null;
+  let toastTimer = null;
+
+  function uid(p){ return p+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function fmtMoney(n){ const sign = n<0?'-':''; return sign+'NT$ '+Math.abs(Math.round(n)).toLocaleString('zh-Hant-TW'); }
+
+  // ---------- Supabase 連線設定 ----------
+  const SUPABASE_URL = 'https://iegnqoeoquosyegaccbi.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_uGhLmL0Hoq7fYl0t6Mweug_3Rkb0GIn';
+  const STATE_ROW_ID = 'asset-app-state';
+  // 把原本一堆獨立的 key,對應成同一包 JSON 裡的欄位名稱
+  const KEY_MAP = {
+    'am2:pockets':'pockets', 'am2:stocks':'stocks', 'am2:fixedExpenses':'fixedExpenses',
+    'am2:budgets':'budgets', 'am2:ledger':'ledger', 'am2:payday':'payday',
+    'am2:quickItems':'quickItems', 'am2:lastPocket':'lastPocketId', 'am2:seedVersion':'seedVersion',
+    'am:goal':'goal'
+  };
+  let cloudState = null; // 記憶體裡的完整狀態快取,對應資料庫那一列的 data 欄位
+  let cloudLoaded = false;
+  let supabaseConnectionError = null;
+
+  function sbHeaders(extra){
+    return Object.assign({
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: 'Bearer '+SUPABASE_ANON_KEY,
+    }, extra||{});
+  }
+
+  async function loadCloudState(){
+    try{
+      const res = await fetch(SUPABASE_URL+'/rest/v1/app_data?id=eq.'+STATE_ROW_ID+'&select=data', {
+        headers: sbHeaders()
+      });
+      if(!res.ok){
+        const t = await res.text().catch(()=> '');
+        throw new Error('HTTP '+res.status+' '+t.slice(0,200));
+      }
+      const rows = await res.json();
+      supabaseConnectionError = null;
+      return (rows && rows.length>0) ? rows[0].data : null;
+    }catch(e){
+      console.error('loadCloudState error', e);
+      supabaseConnectionError = e.message || String(e);
+      return null;
+    }
+  }
+
+  function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+
+  async function pushCloudState(){
+    for(let attempt=1; attempt<=3; attempt++){
+      try{
+        const res = await fetch(SUPABASE_URL+'/rest/v1/app_data?on_conflict=id', {
+          method:'POST',
+          headers: sbHeaders({ 'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates,return=minimal' }),
+          body: JSON.stringify({ id: STATE_ROW_ID, data: cloudState, updated_at: new Date().toISOString() })
+        });
+        if(res.ok){ supabaseConnectionError = null; return true; }
+        const t = await res.text().catch(()=> '');
+        console.error('save fail (status)', res.status, t, 'attempt', attempt);
+      }catch(e){
+        console.error('save fail', e, 'attempt', attempt);
+      }
+      if(attempt<3) await sleep(400*attempt);
+    }
+    showToast('存到雲端資料庫失敗,請確認網路連線');
+    return false;
+  }
+
+  async function safeGet(key){
+    if(!cloudLoaded){
+      cloudState = await loadCloudState() || {};
+      cloudLoaded = true;
+    }
+    const shortKey = KEY_MAP[key] || key;
+    const v = cloudState ? cloudState[shortKey] : undefined;
+    return (v===undefined) ? null : v;
+  }
+
+  async function persist(key,value){
+    if(!cloudLoaded){ cloudState = await loadCloudState() || {}; cloudLoaded = true; }
+    const shortKey = KEY_MAP[key] || key;
+    cloudState = cloudState || {};
+    cloudState[shortKey] = value;
+    return await pushCloudState();
+  }
+
+  async function loadAll(){
+    cloudState = await loadCloudState();
+    cloudLoaded = true;
+    if(cloudState===null && supabaseConnectionError){
+      root.innerHTML = '<div style="padding:32px 20px;font-family:sans-serif;color:#3a2f1f;background:#FAF6EC;min-height:100vh;">'
+        + '<div style="font-weight:700;margin-bottom:8px;font-size:16px;">連不到你的 Supabase 資料庫</div>'
+        + '<div style="font-size:13px;color:#5b6155;line-height:1.7;">請確認:<br>1. 已經在 SQL Editor 執行過建表指令(app_data 這張表)<br>2. 網址跟 anon key 是不是複製對了<br>3. 手機網路是否正常</div>'
+        + '<div style="margin-top:10px;font-size:11px;background:#fff;border:1px solid #E3DAC2;border-radius:8px;padding:10px;word-break:break-all;">'
+        + String(supabaseConnectionError).replace(/</g,'&lt;') + '</div></div>';
+      return;
+    }
+    cloudState = cloudState || {};
+    try{
+      const [pockets,stocks,fixedExpenses,budgets,ledger,payday,goal,quickItems,lastPocketId] = await Promise.all([
+        safeGet('am2:pockets'), safeGet('am2:stocks'), safeGet('am2:fixedExpenses'),
+        safeGet('am2:budgets'), safeGet('am2:ledger'), safeGet('am2:payday'), safeGet('am:goal'),
+        safeGet('am2:quickItems'), safeGet('am2:lastPocket')
+      ]);
+      state.pockets = Array.isArray(pockets) ? pockets : [];
+      state.stocks = Array.isArray(stocks) ? stocks : [];
+      state.fixedExpenses = Array.isArray(fixedExpenses) ? fixedExpenses : [];
+      state.budgets = Array.isArray(budgets) ? budgets : [];
+      state.ledger = Array.isArray(ledger) ? ledger : [];
+      state.payday = (payday && typeof payday==='object') ? payday : {defaultDay:5, overrides:{}};
+      state.goal = (goal && typeof goal==='object') ? goal : {target:1000000, deadline:''};
+      state.quickItems = (quickItems && typeof quickItems==='object') ? quickItems : null;
+      state.lastPocketId = lastPocketId || null;
+    }catch(e){
+      console.error(e);
+      state.pockets=[]; state.stocks=[]; state.fixedExpenses=[]; state.budgets=[]; state.ledger=[];
+      state.payday={defaultDay:5,overrides:{}}; state.goal={target:1000000,deadline:''};
+      state.quickItems=null; state.lastPocketId=null;
+    }
+
+    // 保險:任何時候都不讓被排除的帳戶(如投資帳戶)變成現金口袋
+    const beforeCount = state.pockets.length;
+    state.pockets = state.pockets.filter(p=>!EXCLUDED_POCKET_ACCOUNTS.includes(p.account));
+    if(state.pockets.length!==beforeCount) await persist('am2:pockets', state.pockets);
+
+    if(!budgetView.period){
+      const n = new Date();
+      budgetView.period = n.getFullYear()+'-'+pad(n.getMonth()+1);
+    }
+    if(!txView.period){
+      const n = new Date();
+      txView.period = n.getFullYear()+'-'+pad(n.getMonth()+1);
+    }
+
+    if(!state.quickItems || !Array.isArray(state.quickItems.expense) || !Array.isArray(state.quickItems.income)){
+      state.quickItems = {
+        expense: (state.quickItems && Array.isArray(state.quickItems.expense)) ? state.quickItems.expense : DEFAULT_QUICK_ITEMS.expense.map(q=>({id:uid('qi'), type:'expense', ...q})),
+        income: (state.quickItems && Array.isArray(state.quickItems.income)) ? state.quickItems.income : DEFAULT_QUICK_ITEMS.income.map(q=>({id:uid('qi'), type:'income', ...q})),
+      };
+      await persist('am2:quickItems', state.quickItems);
+    }
+
+    // 版本化種子:只要偵測到你还在用舊版本的內建資料,就整批更新成最新的帳戶餘額/股票/固定支出/預算
+    const storedSeedVersion = await safeGet('am2:seedVersion');
+    if((storedSeedVersion||0) < SEED_VERSION && typeof SEED_LEDGER!=='undefined' && SEED_LEDGER.length>0){
+      const seeded = [...SEED_LEDGER, ...EXTRA_SEED_LEDGER].map(r=>({id:uid('lg'), ...r}));
+      state.ledger = seeded;
+
+      // 群益是投資帳戶,不再當現金口袋,移到股票區
+      state.pockets = state.pockets.filter(p=>p.account!=='群益 6000');
+
+      const knownAccounts = new Set([...seeded.map(l=>l.account), ...Object.keys(DEFAULT_POCKET_BALANCES)]);
+      EXCLUDED_POCKET_ACCOUNTS.forEach(a=>knownAccounts.delete(a));
+      knownAccounts.forEach(acc=>{
+        const label = DEFAULT_POCKET_LABELS[acc] || {name:acc, note:'', category:'cash'};
+        const existing = state.pockets.find(p=>p.account===acc);
+        if(existing){ existing.startingBalance = DEFAULT_POCKET_BALANCES[acc]||0; existing.name = label.name; existing.note = label.note; existing.category = label.category||'cash'; }
+        else { state.pockets.push({id:uid('pk'), account:acc, name:label.name, note:label.note, category:label.category||'cash', startingBalance:(DEFAULT_POCKET_BALANCES[acc]||0), manualAdjustments:[]}); }
+      });
+
+      state.stocks = state.stocks.filter(st=>st.name!=='群益(投資帳戶)');
+      DEFAULT_STOCKS.forEach(s=>{
+        if(!state.stocks.find(st=>st.name===s.name)){ state.stocks.push({id:uid('st'), ...s}); }
+        else { const st = state.stocks.find(st=>st.name===s.name); st.shares=s.shares; st.cost=s.cost; st.marketValue=s.marketValue; }
+      });
+
+      state.fixedExpenses = DEFAULT_FIXED_EXPENSES.map(f=>{
+        const pocket = state.pockets.find(p=>p.account===f.account);
+        return {id:uid('fx'), name:f.name, amount:f.amount, pocketId: pocket?pocket.id:null, paidCycles:{}};
+      });
+      state.budgets = DEFAULT_BUDGETS.map(b=>{
+        const pocket = state.pockets.find(p=>p.account===b.account);
+        return {id:uid('bg'), name:b.name, amount:b.amount, pocketId: pocket?pocket.id:null};
+      });
+
+      await persist('am2:ledger', state.ledger);
+      await persist('am2:pockets', state.pockets);
+      await persist('am2:stocks', state.stocks);
+      await persist('am2:fixedExpenses', state.fixedExpenses);
+      await persist('am2:budgets', state.budgets);
+      await persist('am2:seedVersion', SEED_VERSION);
+      showToast('已更新成最新的帳戶餘額、股票、固定支出跟預算');
+    }
+    render();
+  }
+
+  // ---------- payday / cycle ----------
+  function ymKey(y,m){ return y+'-'+pad(m); }
+  function dayForYM(ym){ return (state.payday.overrides && state.payday.overrides[ym]) || state.payday.defaultDay || 5; }
+  function paydayDate(y,m,day){
+    let d = new Date(y, m-1, day);
+    const dow = d.getDay();
+    if(dow===6) d.setDate(d.getDate()-1);
+    if(dow===0) d.setDate(d.getDate()-2);
+    d.setHours(0,0,0,0);
+    return d;
+  }
+  function isoDate(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+  function getCycle(now){
+    const y=now.getFullYear(), m=now.getMonth()+1;
+    const thisYM = ymKey(y,m);
+    const thisPayday = paydayDate(y,m,dayForYM(thisYM));
+    if(now >= thisPayday){
+      let ny=y, nm=m+1; if(nm>12){nm=1; ny+=1;}
+      const nextYM = ymKey(ny,nm);
+      const nextPayday = paydayDate(ny,nm,dayForYM(nextYM));
+      return {start:thisPayday, end:nextPayday, key:isoDate(thisPayday)};
+    } else {
+      let py=y, pm=m-1; if(pm<1){pm=12; py-=1;}
+      const prevYM = ymKey(py,pm);
+      const prevPayday = paydayDate(py,pm,dayForYM(prevYM));
+      return {start:prevPayday, end:thisPayday, key:isoDate(prevPayday)};
+    }
+  }
+
+  // ---------- ledger seeding ----------
+  function applyLedger(ledger, toastMsg){
+    state.ledger = ledger;
+    const accountsFound = new Set(ledger.map(l=>l.account));
+    const existingAccounts = new Set(state.pockets.map(p=>p.account));
+    accountsFound.forEach(acc=>{
+      if(!existingAccounts.has(acc)){
+        state.pockets.push({id:uid('pk'), account:acc, name:acc, startingBalance:0, manualAdjustments:[]});
+      }
+    });
+    persist('am2:ledger', state.ledger);
+    persist('am2:pockets', state.pockets);
+    render();
+    if(toastMsg) showToast(toastMsg);
+  }
+
+  // ---------- derived calc ----------
+  function pocketLedgerSum(account){
+    return state.ledger.filter(l=>l.account===account).reduce((s,l)=>s+l.amount,0);
+  }
+  function pocketBalance(pocket){
+    const manual = (pocket.manualAdjustments||[]).reduce((s,a)=>s+a.amount,0);
+    return (pocket.startingBalance||0) + pocketLedgerSum(pocket.account) + manual;
+  }
+  function collectKnownCat1(){
+    const set = new Set();
+    state.quickItems.expense.forEach(q=>set.add(q.cat1));
+    state.quickItems.income.forEach(q=>set.add(q.cat1));
+    state.ledger.forEach(l=>{ if(!EXCLUDED_FLOW_CATS.includes(l.cat1)) set.add(l.cat1); });
+    return Array.from(set).filter(Boolean).sort((a,b)=>a.localeCompare(b,'zh-Hant'));
+  }
+
+  function avgMonthlyExpense(account){
+    if(!account) return null;
+    const byMonth = {};
+    state.ledger.forEach(l=>{
+      if(l.account!==account) return;
+      if(l.type!=='支出') return;
+      if(EXCLUDED_FLOW_CATS.includes(l.cat1)) return;
+      if(l.cat1==='固定支出') return;
+      const ym = l.datetime.slice(0,7);
+      byMonth[ym] = (byMonth[ym]||0) + Math.abs(l.amount);
+    });
+    const months = Object.keys(byMonth);
+    if(months.length===0) return null;
+    const total = months.reduce((s,m)=>s+byMonth[m],0);
+    return total / months.length;
+  }
+
+  function categorySpend(budget, prefix, prefixLen){
+    const aliases = CATEGORY_ALIASES[budget.name] || [budget.name];
+    return state.ledger.filter(l=>{
+      if(l.type!=='支出') return false;
+      if(EXCLUDED_FLOW_CATS.includes(l.cat1)) return false;
+      if(!aliases.includes(l.cat1)) return false;
+      return l.datetime.slice(0,prefixLen)===prefix;
+    }).reduce((s,l)=>s+Math.abs(l.amount),0);
+  }
+  function budgetSpentThisMonth(budget){
+    const n = new Date();
+    return categorySpend(budget, n.getFullYear()+'-'+pad(n.getMonth()+1), 7);
+  }
+  function budgetSpentForView(budget){
+    const len = budgetView.mode==='month' ? 7 : 4;
+    return categorySpend(budget, budgetView.period, len);
+  }
+  function shiftPeriod(view, delta){
+    if(view.mode==='month'){
+      const [y,m] = view.period.split('-').map(Number);
+      const d = new Date(y, m-1+delta, 1);
+      view.period = d.getFullYear()+'-'+pad(d.getMonth()+1);
+    } else {
+      view.period = String(parseInt(view.period,10)+delta);
+    }
+  }
+  function toggleMode(view){
+    if(view.mode==='month'){ view.mode='year'; view.period = view.period.slice(0,4); }
+    else { const n=new Date(); view.mode='month'; view.period = view.period+'-'+pad(n.getMonth()+1); }
+  }
+  function yearMonthsElapsed(year){
+    const rows = state.ledger.filter(l=>l.datetime.slice(0,4)===String(year));
+    if(rows.length===0) return 0;
+    const months = rows.map(l=>l.datetime.slice(0,7)).sort();
+    const first = months[0], last = months[months.length-1];
+    const [fy,fm] = first.split('-').map(Number);
+    const [ly,lm] = last.split('-').map(Number);
+    return (ly-fy)*12 + (lm-fm) + 1;
+  }
+
+  function pocketProjection(pocket, cycle){
+    const unpaidFixed = state.fixedExpenses.filter(f=>f.pocketId===pocket.id && !(f.paidCycles&&f.paidCycles[cycle.key]))
+      .reduce((s,f)=>s+f.amount,0);
+    const remainingBudget = state.budgets.filter(b=>b.pocketId===pocket.id)
+      .reduce((s,b)=> s + Math.max(b.amount - budgetSpentThisMonth(b), 0), 0);
+    const balance = pocketBalance(pocket);
+    return { balance, unpaidFixed, remainingBudget, projected: balance - unpaidFixed - remainingBudget };
+  }
+
+  function showToast(msg){
+    let el = document.getElementById('am-toast'); if(el) el.remove();
+    el = document.createElement('div'); el.id='am-toast'; el.className='am-toast'; el.textContent=msg;
+    root.appendChild(el);
+    clearTimeout(toastTimer); toastTimer = setTimeout(()=>el.remove(), 2400);
+  }
+  function openModal(m){ modal=m; render(); }
+  function closeModal(){ modal=null; render(); }
+
+  // ---------- render ----------
+  function renderPocketRow(pocket, proj){
+    return `
+    <div class="am-row">
+      <div class="am-row-main">
+        <div class="am-row-name">${escapeHtml(pocket.name)}</div>
+        ${pocket.note ? `<div class="am-row-sub">${escapeHtml(pocket.note)}</div>` : ''}
+        <div class="am-row-sub">預估發薪前剩餘:<span class="${proj.projected<0?'am-pocket-shortfall':'am-pocket-ok'}">${fmtMoney(proj.projected)}</span> <span class="am-detail-link" data-pocket-detail="${pocket.id}">查看明細</span></div>
+      </div>
+      <div>
+        <div class="am-row-amt am-num">${fmtMoney(proj.balance)}</div>
+        <div style="text-align:right;margin-top:4px; display:flex; gap:6px; justify-content:flex-end;">
+          <button class="am-adj-btn" data-edit-pocket="${pocket.id}">改名</button>
+          <button class="am-adj-btn" data-adjust-pocket="${pocket.id}">微調</button>
+        </div>
+      </div>
+      <button class="am-row-del" data-del-pocket="${pocket.id}" title="刪除">✕</button>
+    </div>`;
+  }
+
+  function render(){
+    try{ renderInner(); }
+    catch(e){
+      console.error('render error', e);
+      root.innerHTML = '<div style="padding:32px 20px;font-family:sans-serif;color:#3a2f1f;background:#FAF6EC;min-height:100vh;">'
+        + '<div style="font-weight:700;margin-bottom:8px;font-size:16px;">畫面出了一點問題</div>'
+        + '<div style="font-size:13px;color:#5b6155;line-height:1.6;">重新整理一次通常就會恢復。如果一直發生,麻煩把下面這行錯誤訊息回報給我:</div>'
+        + '<div style="margin-top:10px;font-size:11px;background:#fff;border:1px solid #E3DAC2;border-radius:8px;padding:10px;word-break:break-all;">'
+        + String(e && e.message ? e.message : e).replace(/</g,'&lt;') + '</div></div>';
+    }
+  }
+  function renderInner(){
+    if(state.pockets===null){ root.innerHTML='<div class="am-loading">正在準備你的帳本…</div>'; return; }
+    const now = new Date();
+    const cycle = getCycle(now);
+    const thisYM = ymKey(now.getFullYear(), now.getMonth()+1);
+
+    const projections = state.pockets.map(p=>({pocket:p, proj:pocketProjection(p,cycle)}));
+    const shortfalls = projections.filter(x=>x.proj.projected<0);
+
+    const totalCash = state.pockets.reduce((s,p)=>s+pocketBalance(p),0);
+    const totalStock = state.stocks.reduce((s,st)=>s+(st.marketValue||0),0);
+    const totalAssets = totalCash + totalStock;
+    const goalRatio = state.goal.target>0 ? Math.min(totalAssets/state.goal.target,1) : 0;
+    const goalPct = state.goal.target>0 ? Math.round((totalAssets/state.goal.target)*100) : 0;
+
+    const ringSize=92, stroke=9, r=(ringSize-stroke)/2, c=2*Math.PI*r;
+    const ringHtml = `<svg width="${ringSize}" height="${ringSize}" viewBox="0 0 ${ringSize} ${ringSize}">
+      <circle cx="${ringSize/2}" cy="${ringSize/2}" r="${r}" fill="none" stroke="var(--gold-soft)" stroke-width="${stroke}"/>
+      <circle cx="${ringSize/2}" cy="${ringSize/2}" r="${r}" fill="none" stroke="var(--gold)" stroke-width="${stroke}" stroke-linecap="round"
+        stroke-dasharray="${c}" stroke-dashoffset="${c*(1-goalRatio)}" transform="rotate(-90 ${ringSize/2} ${ringSize/2})"/>
+    </svg>`;
+
+    const cycleDaysLeft = Math.ceil((cycle.end - now) / 86400000);
+
+    let html = `
+      <div class="am-header">
+        <div class="am-header-top">
+          <div class="am-title">資產管理</div>
+          <div class="am-payday-chip" id="am-open-payday">薪水日 <b>${dayForYM(thisYM)}</b> 號 ▾</div>
+        </div>
+        <div class="am-cycle-text">本次發薪週期:${isoDate(cycle.start)} ~ ${isoDate(new Date(cycle.end-86400000))}(還有 ${cycleDaysLeft} 天)</div>
+      </div>
+      <div class="am-body">
+
+        ${shortfalls.length>0 ? `
+        <div class="am-warning-banner">
+          <div class="t">⚠️ 這幾個口袋在下次發薪前可能不夠用</div>
+          <ul>
+            ${shortfalls.map(x=>`<li>${escapeHtml(x.pocket.name)}:預估還缺 <b>${fmtMoney(-x.proj.projected)}</b></li>`).join('')}
+          </ul>
+        </div>` : ''}
+
+        <div class="am-card am-net-card">
+          <div class="am-net-info">
+            <div class="am-net-eyebrow">總資產淨值(現金口袋+股票)</div>
+            <div class="am-net-value am-num">${fmtMoney(totalAssets)}</div>
+            <div class="am-net-breakdown">現金口袋 <b class="am-num">${fmtMoney(totalCash)}</b>(${totalAssets>0?Math.round(totalCash/totalAssets*100):0}%)・股票 <b class="am-num">${fmtMoney(totalStock)}</b>(${totalAssets>0?Math.round(totalStock/totalAssets*100):0}%)</div>
+            <div class="am-net-goal-text">存錢目標達成 <b>${goalPct}%</b>${state.goal.deadline?('・目標日 '+state.goal.deadline):''}</div>
+          </div>
+          <div class="am-ring-wrap" id="am-goal-ring">${ringHtml}
+            <div class="am-ring-pct"><div class="p am-num">${goalPct}%</div><div class="l">達成率</div></div>
+          </div>
+        </div>
+
+        <div class="am-card">
+          <div class="am-section-title">快速記帳 <span style="display:flex; gap:10px;"><button class="am-add-btn" id="am-view-tx">查看收支明細</button><button class="am-add-btn" id="am-manage-quick">管理項目</button></span></div>
+          ${(()=>{
+            const cat1List = [];
+            state.quickItems.expense.forEach(q=>{ if(!cat1List.includes(q.cat1)) cat1List.push(q.cat1); });
+            if(quickCatFilter===null){ quickCatFilter = cat1List[0] || '收入'; }
+            const tabs = [...cat1List, '收入'];
+            const active = tabs.includes(quickCatFilter) ? quickCatFilter : tabs[0];
+            const items = active==='收入' ? state.quickItems.income : state.quickItems.expense.filter(q=>q.cat1===active);
+            return `
+            <div class="am-quick-tabs">
+              ${tabs.map(t=>`<button class="am-quick-tab ${t===active?'sel':''} ${t==='收入'?'inc':''}" data-quick-cat="${escapeHtml(t)}">${escapeHtml(t)}</button>`).join('')}
+            </div>
+            <div class="am-quick-grid">
+              ${items.map(qi=>`<button class="am-quick-chip ${qi.type==='income'?'inc':'exp'}" data-quick="${qi.id}">${escapeHtml(qi.cat2||qi.cat1)}</button>`).join('')}
+              ${items.length===0 ? '<div class="am-empty">這個項目底下還沒有快速按鈕,點「管理項目」新增</div>' : ''}
+            </div>`;
+          })()}
+        </div>
+
+
+        <div class="am-card">
+          <div class="am-section-title">現金口袋 <span style="display:flex; gap:10px;"><button class="am-add-btn" id="am-pocket-transfer">轉帳</button><button class="am-add-btn" id="am-add-pocket">＋ 新增口袋</button></span></div>
+          <div class="am-list">
+            ${(()=>{
+              const cashList = projections.filter(x=>(x.pocket.category||'cash')!=='savings');
+              if(cashList.length===0) return '<div class="am-empty">還沒有口袋,匯入 CSV 或手動新增</div>';
+              return cashList.map(({pocket,proj})=>renderPocketRow(pocket,proj)).join('');
+            })()}
+          </div>
+        </div>
+
+        <div class="am-card">
+          <div class="am-section-title">儲蓄 / 緊急備用金</div>
+          <div class="am-list">
+            ${(()=>{
+              const savingsList = projections.filter(x=>x.pocket.category==='savings');
+              if(savingsList.length===0) return '<div class="am-empty">還沒有儲蓄類口袋</div>';
+              return savingsList.map(({pocket,proj})=>renderPocketRow(pocket,proj)).join('');
+            })()}
+          </div>
+        </div>
+
+        <div class="am-card">
+          <div class="am-section-title">股票 <button class="am-add-btn" id="am-add-stock">＋ 新增持股</button></div>
+          <div class="am-list">
+            ${state.stocks.length===0 ? '<div class="am-empty">還沒有持股紀錄</div>' :
+              state.stocks.map(st=>{
+                const profit = (st.marketValue||0)-(st.cost||0);
+                const rate = st.cost>0 ? (profit/st.cost*100) : 0;
+                return `
+                <div class="am-row">
+                  <div class="am-row-main">
+                    <div class="am-row-name">${escapeHtml(st.name)}</div>
+                    <div class="am-row-sub">${st.shares||0} 股・成本 ${fmtMoney(st.cost||0)}・損益 <span style="color:${profit>=0?'var(--green)':'var(--rust)'}">${fmtMoney(profit)}(${rate.toFixed(1)}%)</span></div>
+                  </div>
+                  <div class="am-row-amt am-num">${fmtMoney(st.marketValue||0)}</div>
+                  <button class="am-row-del" data-del-stock="${st.id}" title="刪除">✕</button>
+                </div>`;
+              }).join('')}
+          </div>
+        </div>
+
+        <div class="am-card">
+          <div class="am-section-title">固定支出(預扣帳戶) <button class="am-add-btn" id="am-add-fixed">＋ 新增固定支出</button></div>
+          <div class="am-list">
+            ${state.fixedExpenses.length===0 ? '<div class="am-empty">還沒有固定支出項目</div>' :
+              state.fixedExpenses.map(f=>{
+                const pocket = state.pockets.find(p=>p.id===f.pocketId);
+                const paid = !!(f.paidCycles && f.paidCycles[cycle.key]);
+                return `
+                <div class="am-row">
+                  <div class="am-checkbox ${paid?'checked':''}" data-toggle-fixed="${f.id}">${paid?'✓':''}</div>
+                  <div class="am-row-main">
+                    <div class="am-row-name">${escapeHtml(f.name)}</div>
+                    <div class="am-row-sub">${pocket?escapeHtml(pocket.name):'未指派口袋'}${paid?'・本期已扣款':'・本期尚未扣款'}</div>
+                  </div>
+                  <div class="am-row-amt am-num">${fmtMoney(f.amount)}</div>
+                  <button class="am-row-del" data-del-fixed="${f.id}" title="刪除">✕</button>
+                </div>`;
+              }).join('')}
+          </div>
+        </div>
+
+        <div class="am-card">
+          <div class="am-section-title">預算 <button class="am-add-btn" id="am-add-budget">＋ 新增預算</button></div>
+          <div class="am-budget-view-bar">
+            <div class="am-budget-mode-toggle">
+              <button class="am-view-toggle ${budgetView.mode==='month'?'sel':''}" data-budget-mode="month">月</button>
+              <button class="am-view-toggle ${budgetView.mode==='year'?'sel':''}" data-budget-mode="year">年</button>
+            </div>
+            <div class="am-period-nav">
+              <button id="am-budget-prev">‹</button>
+              <span class="am-period-label">${budgetView.mode==='month'?budgetView.period:(budgetView.period+'年')}</span>
+              <button id="am-budget-next">›</button>
+            </div>
+          </div>
+          ${(()=>{ const _ym = budgetView.mode==='year' ? Math.max(yearMonthsElapsed(budgetView.period),1) : 12; return budgetView.mode==='year' ? `
+          <div class="am-budget-basis-row">
+            <button class="am-basis-chip ${!budgetView.useActualMonths?'sel':''}" data-budget-basis="full">整年預算(×12)</button>
+            <button class="am-basis-chip ${budgetView.useActualMonths?'sel':''}" data-budget-basis="actual">實際年預算(×${_ym}個月)</button>
+          </div>
+          <div class="am-hint" style="margin-top:0;">${budgetView.period}年目前資料從第一筆到最後一筆,共經過 ${_ym} 個月</div>
+          ` : ''; })()}
+          <div class="am-list">
+            ${state.budgets.length===0 ? '<div class="am-empty">還沒有預算項目</div>' :
+              (()=>{ const cachedActualMonths = budgetView.mode==='year' ? Math.max(yearMonthsElapsed(budgetView.period),1) : 1; return state.budgets.map(b=>{
+                const pocket = state.pockets.find(p=>p.id===b.pocketId);
+                const spent = budgetSpentForView(b);
+                const months = budgetView.mode==='year' ? (budgetView.useActualMonths ? cachedActualMonths : 12) : 1;
+                const displayAmount = b.amount * months;
+                const pct = displayAmount>0 ? Math.min(spent/displayAmount*100,100) : 0;
+                const over = spent>displayAmount;
+                return `
+                <div class="am-row" style="flex-direction:column; align-items:stretch;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div class="am-row-main">
+                      <div class="am-row-name">${escapeHtml(b.name)}</div>
+                      <div class="am-row-sub">${pocket?escapeHtml(pocket.name):'未指派口袋'}・已花 ${fmtMoney(spent)} / ${fmtMoney(displayAmount)}・${over?('<span class="am-pocket-shortfall">超支 '+fmtMoney(spent-displayAmount)+'</span>'):('<span class="am-pocket-ok">剩餘 '+fmtMoney(displayAmount-spent)+'</span>')}</div>
+                    </div>
+                    <button class="am-row-del" data-del-budget="${b.id}" title="刪除">✕</button>
+                  </div>
+                  <div class="am-progress-bar"><div class="am-progress-fill" style="width:${pct}%; background:${over?'var(--rust)':'var(--green)'}"></div></div>
+                </div>`;
+              }); })().join('')}
+          </div>
+        </div>
+
+        <div class="am-manage-link" id="am-set-goal">設定存錢目標</div>
+      </div>
+
+      <div class="am-tabbar-bg"></div>
+      <div class="am-tabbar">
+        <div class="am-tab active" data-tab="asset"><div class="am-tab-icon">💰</div><div class="am-tab-label">資產</div></div>
+        <div class="am-tab disabled" data-tab="reading"><div class="am-tab-icon">📚</div><div class="am-tab-label">讀書</div></div>
+        <div class="am-tab disabled" data-tab="daily"><div class="am-tab-icon">🗓️</div><div class="am-tab-label">日常</div></div>
+        <div class="am-tab disabled" data-tab="knowledge"><div class="am-tab-icon">🧠</div><div class="am-tab-label">知識庫</div></div>
+      </div>
+    `;
+
+    if(modal) html += renderModal(cycle, thisYM);
+    root.innerHTML = html;
+    attachEvents(cycle, thisYM);
+  }
+
+  function renderModal(cycle, thisYM){
+    if(modal.type==='txDetail'){
+      const len = txView.mode==='month' ? 7 : 4;
+      const rows = state.ledger.filter(l=>l.datetime.slice(0,len)===txView.period && !EXCLUDED_FLOW_CATS.includes(l.cat1)).sort((a,b)=>b.datetime.localeCompare(a.datetime));
+      const totalIncome = rows.filter(l=>l.type==='收入').reduce((s,l)=>s+Math.abs(l.amount),0);
+      const totalExpense = rows.filter(l=>l.type==='支出').reduce((s,l)=>s+Math.abs(l.amount),0);
+
+      let bodyHtml;
+      if(txView.group==='detail'){
+        bodyHtml = rows.length===0 ? '<div class="am-empty">這段期間沒有紀錄</div>' : rows.map(l=>`
+          <div class="am-row">
+            <div class="am-row-main">
+              <div class="am-row-name">${escapeHtml(l.cat1)}${l.cat2?('・'+escapeHtml(l.cat2)):''}</div>
+              <div class="am-row-sub">${l.datetime.slice(0,10)}・${escapeHtml(l.account)}${l.note?('・'+escapeHtml(l.note)):''}</div>
+            </div>
+            <div class="am-row-amt ${l.type==='收入'?'inc':'exp'} am-num">${l.type==='收入'?'+':'-'}${Math.abs(l.amount).toLocaleString('zh-Hant-TW')}</div>
+          </div>`).join('');
+      } else {
+        const map = {};
+        rows.forEach(l=>{
+          const key = l.type+'|'+l.cat1;
+          if(!map[key]) map[key] = {type:l.type, cat1:l.cat1, total:0, count:0};
+          map[key].total += Math.abs(l.amount);
+          map[key].count += 1;
+        });
+        const groups = Object.values(map).sort((a,b)=>b.total-a.total);
+        bodyHtml = groups.length===0 ? '<div class="am-empty">這段期間沒有紀錄</div>' : groups.map(g=>`
+          <div class="am-row">
+            <div class="am-row-main">
+              <div class="am-row-name">${escapeHtml(g.cat1)}</div>
+              <div class="am-row-sub">${g.count} 筆</div>
+            </div>
+            <div class="am-row-amt ${g.type==='收入'?'inc':'exp'} am-num">${g.type==='收入'?'+':'-'}${g.total.toLocaleString('zh-Hant-TW')}</div>
+          </div>`).join('');
+      }
+
+      return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">收支明細</div>
+        <div class="am-budget-view-bar">
+          <div class="am-budget-mode-toggle">
+            <button class="am-view-toggle ${txView.mode==='month'?'sel':''}" data-tx-mode="month">月</button>
+            <button class="am-view-toggle ${txView.mode==='year'?'sel':''}" data-tx-mode="year">年</button>
+          </div>
+          <div class="am-period-nav">
+            <button id="am-tx-prev">‹</button>
+            <span class="am-period-label">${txView.mode==='month'?txView.period:(txView.period+'年')}</span>
+            <button id="am-tx-next">›</button>
+          </div>
+        </div>
+        <div class="am-budget-basis-row">
+          <button class="am-basis-chip ${txView.group==='detail'?'sel':''}" data-tx-group="detail">細項</button>
+          <button class="am-basis-chip ${txView.group==='category'?'sel':''}" data-tx-group="category">大項目</button>
+        </div>
+        <div class="am-hint" style="margin-top:0;">這段期間收入 <b style="color:var(--green)">${fmtMoney(totalIncome)}</b>・支出 <b style="color:var(--rust)">${fmtMoney(totalExpense)}</b>(帳戶間轉帳不算在內,轉帳手續費仍算支出)</div>
+        <div class="am-list">${bodyHtml}</div>
+        <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">關閉</button></div>
+      </div></div>`;
+    }
+
+    if(modal.type==='quickEntry'){
+      const item = [...state.quickItems.expense, ...state.quickItems.income].find(q=>q.id===modal.itemId);
+      const suggestedBudget = state.budgets.find(b=>(CATEGORY_ALIASES[b.name]||[b.name]).includes(item.cat1));
+      const pocketId = modal.pocketId || (suggestedBudget && suggestedBudget.pocketId) || state.lastPocketId || (state.pockets[0] && state.pockets[0].id);
+      return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">${item.type==='income'?'收入':'支出'}:${escapeHtml(item.cat1)}・${escapeHtml(item.cat2)}</div>
+        <div class="am-field"><label>金額</label><input type="number" inputmode="decimal" id="am-qe-amount" placeholder="0" autofocus></div>
+        <div class="am-field"><label>從哪個口袋</label>
+          <select id="am-qe-pocket">
+            ${state.pockets.map(p=>`<option value="${p.id}" ${pocketId===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="am-field"><label>日期</label><input type="date" id="am-qe-date" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div class="am-field"><label>備註(選填)</label><input type="text" id="am-qe-note" placeholder="說明一下"></div>
+        <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-quick-entry">儲存</button></div>
+      </div></div>`;
+    }
+
+    if(modal.type==='manageQuick'){
+      const type = modal.newType || 'expense';
+      return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">管理快速記帳項目</div>
+        <div style="font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:6px;">支出項目</div>
+        ${state.quickItems.expense.map(qi=>`
+          <div class="am-quick-manage-row">
+            <div style="flex:1;font-size:14px;">${escapeHtml(qi.cat1)}・${escapeHtml(qi.cat2)}</div>
+            <button class="am-row-del" data-del-quick="${qi.id}">✕</button>
+          </div>`).join('') || '<div class="am-empty">尚無支出快速項目</div>'}
+        <div style="font-size:12px;font-weight:700;color:var(--ink-soft);margin:14px 0 6px;">收入項目</div>
+        ${state.quickItems.income.map(qi=>`
+          <div class="am-quick-manage-row">
+            <div style="flex:1;font-size:14px;">${escapeHtml(qi.cat1)}・${escapeHtml(qi.cat2)}</div>
+            <button class="am-row-del" data-del-quick="${qi.id}">✕</button>
+          </div>`).join('') || '<div class="am-empty">尚無收入快速項目</div>'}
+        <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--hairline);">
+          <div class="am-sheet-title" style="font-size:15px;">新增項目</div>
+          <div class="am-field"><label>類型</label>
+            <div class="am-seg">
+              <button class="${type==='income'?'sel inc':''}" data-set-quicktype="income">收入</button>
+              <button class="${type==='expense'?'sel exp':''}" data-set-quicktype="expense">支出</button>
+            </div>
+          </div>
+          <div class="am-field"><label>大分類</label>
+            <input type="text" id="am-qi-cat1" list="am-cat1-datalist" placeholder="例如:吃喝" value="${modal.newCat1||''}">
+            <datalist id="am-cat1-datalist">
+              ${collectKnownCat1().map(c=>`<option value="${escapeHtml(c)}"></option>`).join('')}
+            </datalist>
+          </div>
+          <div class="am-field"><label>細項名稱(按鈕上顯示的字)</label><input type="text" id="am-qi-cat2" placeholder="例如:咖啡" value="${modal.newCat2||''}"></div>
+          <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">關閉</button><button class="am-btn primary" id="am-save-quickitem">新增</button></div>
+        </div>
+      </div></div>`;
+    }
+
+    if(modal.type==='addPocket') return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">新增口袋</div>
+        <div class="am-field"><label>名稱</label><input type="text" id="am-pk-name" placeholder="例如:零用金" value="${modal.name||''}"></div>
+        <div class="am-field"><label>類別</label>
+          <div class="am-seg">
+            <button class="${(modal.category||'cash')==='cash'?'sel inc':''}" data-set-pkcat="cash">現金口袋</button>
+            <button class="${modal.category==='savings'?'sel inc':''}" data-set-pkcat="savings">儲蓄/緊急備用金</button>
+          </div>
+        </div>
+        <div class="am-field"><label>備註(選填,例如分配策略)</label><input type="text" id="am-pk-note" placeholder="例如:生活餘額、旅遊預存2500" value="${modal.note||''}"></div>
+        <div class="am-field"><label>起始餘額</label><input type="number" inputmode="decimal" id="am-pk-balance" value="${modal.startingBalance||0}"></div>
+        <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-pocket">儲存</button></div>
+      </div></div>`;
+
+    if(modal.type==='pocketDetail'){
+      const pocket = state.pockets.find(p=>p.id===modal.pocketId);
+      if(!pocket) return '';
+      const myFixed = state.fixedExpenses.filter(f=>f.pocketId===pocket.id);
+      const myBudgets = state.budgets.filter(b=>b.pocketId===pocket.id);
+      const fixedRows = myFixed.map(f=>({name:f.name, amount:f.amount, paid:!!(f.paidCycles&&f.paidCycles[cycle.key])}))
+        .sort((a,b)=> (a.paid===b.paid)?0:(a.paid?1:-1));
+      const budgetRows = myBudgets.map(b=>{
+        const spent = budgetSpentThisMonth(b);
+        return {name:b.name, amount:b.amount, spent, remaining:b.amount-spent};
+      }).sort((a,b)=>a.remaining-b.remaining);
+      const proj = pocketProjection(pocket, cycle);
+
+      return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">「${escapeHtml(pocket.name)}」明細</div>
+        <div class="am-hint" style="margin-top:0;">目前餘額 ${fmtMoney(proj.balance)}・預估發薪前剩餘 <b style="color:${proj.projected<0?'var(--rust)':'var(--green)'}">${fmtMoney(proj.projected)}</b></div>
+        ${fixedRows.length>0 ? `
+        <div style="font-size:12px;font-weight:700;color:var(--ink-soft);margin:14px 0 6px;">固定支出(本期)</div>
+        ${fixedRows.map(r=>`
+          <div class="am-row">
+            <div class="am-row-main"><div class="am-row-name">${escapeHtml(r.name)}</div></div>
+            <div class="am-row-amt am-num" style="color:${r.paid?'var(--green)':'var(--rust)'}">${r.paid?'已扣款':'尚未扣款'}・${fmtMoney(r.amount)}</div>
+          </div>`).join('')}` : ''}
+        ${budgetRows.length>0 ? `
+        <div style="font-size:12px;font-weight:700;color:var(--ink-soft);margin:14px 0 6px;">預算(本月)・想省錢就先看排在最上面的</div>
+        ${budgetRows.map(r=>`
+          <div class="am-row">
+            <div class="am-row-main"><div class="am-row-name">${escapeHtml(r.name)}</div><div class="am-row-sub">已花 ${fmtMoney(r.spent)} / ${fmtMoney(r.amount)}</div></div>
+            <div class="am-row-amt am-num" style="color:${r.remaining<0?'var(--rust)':'var(--green)'}">${r.remaining<0?('超支 '+fmtMoney(-r.remaining)):('剩餘 '+fmtMoney(r.remaining))}</div>
+          </div>`).join('')}` : ''}
+        ${(fixedRows.length===0 && budgetRows.length===0) ? '<div class="am-empty">這個口袋還沒有指派固定支出或預算</div>' : ''}
+        <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">關閉</button></div>
+      </div></div>`;
+    }
+
+    if(modal.type==='editPocket'){
+      const pocket = state.pockets.find(p=>p.id===modal.pocketId);
+      const cat = modal.category || (pocket?(pocket.category||'cash'):'cash');
+      return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">編輯口袋</div>
+        <div class="am-field"><label>名稱</label><input type="text" id="am-ep-name" value="${escapeHtml(pocket?pocket.name:'')}"></div>
+        <div class="am-field"><label>類別</label>
+          <div class="am-seg">
+            <button class="${cat==='cash'?'sel inc':''}" data-set-epcat="cash">現金口袋</button>
+            <button class="${cat==='savings'?'sel inc':''}" data-set-epcat="savings">儲蓄/緊急備用金</button>
+          </div>
+        </div>
+        <div class="am-field"><label>備註(選填,例如分配策略)</label><input type="text" id="am-ep-note" value="${escapeHtml(pocket?(pocket.note||''):'')}"></div>
+        <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-editpocket">儲存</button></div>
+      </div></div>`;
+    }
+
+    if(modal.type==='pocketTransfer') return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">口袋間轉帳</div>
+        <div class="am-field"><label>從哪個口袋轉出</label>
+          <select id="am-tr-from">${state.pockets.map(p=>`<option value="${p.id}" ${modal.fromId===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}</select>
+        </div>
+        <div class="am-field"><label>轉入哪個口袋</label>
+          <select id="am-tr-to">${state.pockets.map(p=>`<option value="${p.id}" ${modal.toId===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}</select>
+        </div>
+        <div class="am-field"><label>金額</label><input type="number" inputmode="decimal" id="am-tr-amount" placeholder="0"></div>
+        <div class="am-field"><label>手續費(選填)</label><input type="number" inputmode="decimal" id="am-tr-fee" placeholder="0"></div>
+        <div class="am-field"><label>日期</label><input type="date" id="am-tr-date" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div class="am-field"><label>備註(選填)</label><input type="text" id="am-tr-note" placeholder="說明一下這筆轉帳"></div>
+        <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-transfer">儲存</button></div>
+      </div></div>`;
+
+    if(modal.type==='adjustPocket'){
+      const pocket = state.pockets.find(p=>p.id===modal.pocketId);
+      return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">微調「${escapeHtml(pocket?pocket.name:'')}」餘額</div>
+        <div class="am-hint">正數增加、負數減少,用於匯入資料之間的臨時調整</div>
+        <div class="am-field"><label>金額</label><input type="number" inputmode="decimal" id="am-adj-amount" placeholder="例如 -500 或 500"></div>
+        <div class="am-field"><label>備註(選填)</label><input type="text" id="am-adj-note" placeholder="說明一下這筆調整"></div>
+        <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-adjust">儲存</button></div>
+      </div></div>`;
+    }
+
+    if(modal.type==='addStock') return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">${modal.editId?'編輯持股':'新增持股'}</div>
+        <div class="am-field"><label>名稱</label><input type="text" id="am-st-name" value="${modal.name||''}" placeholder="例如:0050"></div>
+        <div class="am-field"><label>股數</label><input type="number" inputmode="decimal" id="am-st-shares" value="${modal.shares||''}"></div>
+        <div class="am-field"><label>投資成本(總額)</label><input type="number" inputmode="decimal" id="am-st-cost" value="${modal.cost||''}"></div>
+        <div class="am-field"><label>目前市值(總額)</label><input type="number" inputmode="decimal" id="am-st-value" value="${modal.marketValue||''}"></div>
+        <div class="am-hint">損益金額與損益率會自動算,不用手動輸入</div>
+        <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-stock">儲存</button></div>
+      </div></div>`;
+
+    if(modal.type==='addFixed') return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">新增固定支出</div>
+        <div class="am-field"><label>名稱</label><input type="text" id="am-fx-name" value="${modal.name||''}" placeholder="例如:摩托車保險"></div>
+        <div class="am-field"><label>金額</label><input type="number" inputmode="decimal" id="am-fx-amount" value="${modal.amount||''}"></div>
+        <div class="am-field"><label>從哪個口袋扣</label>
+          <select id="am-fx-pocket">
+            <option value="">未指派</option>
+            ${state.pockets.map(p=>`<option value="${p.id}" ${modal.pocketId===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-fixed">儲存</button></div>
+      </div></div>`;
+
+    if(modal.type==='addBudget'){
+      const selectedPocket = state.pockets.find(p=>p.id===modal.pocketId);
+      const avg = selectedPocket ? avgMonthlyExpense(selectedPocket.account) : null;
+      return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">新增預算</div>
+        <div class="am-field"><label>名稱</label><input type="text" id="am-bg-name" value="${modal.name||''}" placeholder="例如:餐飲預算"></div>
+        <div class="am-field"><label>從哪個口袋出</label>
+          <select id="am-bg-pocket">
+            <option value="">請選擇口袋</option>
+            ${state.pockets.map(p=>`<option value="${p.id}" ${modal.pocketId===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}
+          </select>
+        </div>
+        ${avg!==null ? `
+        <div class="am-hint" style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:-4px;">
+          <span>這個口袋過去平均每月花費約 <b class="am-num" style="color:var(--ink);">${fmtMoney(avg)}</b></span>
+          <button class="am-adj-btn" id="am-apply-suggest" type="button">套用這個金額</button>
+        </div>` : (modal.pocketId ? '<div class="am-hint">這個口袋還沒有足夠的歷史資料可以參考</div>' : '')}
+        <div class="am-field"><label>每期預算金額</label><input type="number" inputmode="decimal" id="am-bg-amount" value="${modal.amount||''}" placeholder="你自己決定要抓多少"></div>
+        <div class="am-hint">已花金額會自動從匯入的記帳資料裡對這個口袋的支出加總</div>
+        <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-budget">儲存</button></div>
+      </div></div>`;
+    }
+
+    if(modal.type==='setPayday') return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">設定發薪日</div>
+        <div class="am-field"><label>本月(${thisYM})薪水日是幾號</label><input type="number" min="1" max="31" id="am-py-this" value="${dayForYM(thisYM)}"></div>
+        <div class="am-field"><label>預設薪水日(其他月份預設用這個)</label><input type="number" min="1" max="31" id="am-py-default" value="${state.payday.defaultDay||5}"></div>
+        <div class="am-hint">如果薪水日遇到週六會提前一天、遇到週日會提前兩天,系統會自動算</div>
+        <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-payday">儲存</button></div>
+      </div></div>`;
+
+    if(modal.type==='setGoal') return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">設定存錢目標</div>
+        <div class="am-field"><label>目標總資產</label><input type="number" inputmode="decimal" id="am-goal-target" value="${modal.target ?? state.goal.target}"></div>
+        <div class="am-field"><label>目標日期(選填)</label><input type="date" id="am-goal-date" value="${modal.deadline ?? state.goal.deadline}"></div>
+        <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-goal">儲存</button></div>
+      </div></div>`;
+
+    if(modal.type==='confirmDel') return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">確定刪除？</div>
+        <p style="font-size:13.5px;color:var(--ink-soft);">${escapeHtml(modal.label||'此項目')}刪除後無法復原。</p>
+        <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn danger" id="am-confirm-del">刪除</button></div>
+      </div></div>`;
+
+    return '';
+  }
+
+  function attachEvents(cycle, thisYM){
+    const $ = sel=>root.querySelector(sel);
+
+    $('#am-open-payday').onclick = ()=> openModal({type:'setPayday'});
+    $('#am-goal-ring').onclick = ()=> openModal({type:'setGoal', target:state.goal.target, deadline:state.goal.deadline});
+
+    $('#am-manage-quick').onclick = ()=> openModal({type:'manageQuick', newType:'expense'});
+    $('#am-view-tx').onclick = ()=> openModal({type:'txDetail'});
+    root.querySelectorAll('[data-quick-cat]').forEach(b=>{
+      b.onclick = ()=>{ quickCatFilter = b.dataset.quickCat; render(); };
+    });
+    root.querySelectorAll('[data-quick]').forEach(b=>{
+      b.onclick = ()=> openModal({type:'quickEntry', itemId:b.dataset.quick});
+    });
+    $('#am-set-goal').onclick = ()=> openModal({type:'setGoal', target:state.goal.target, deadline:state.goal.deadline});
+
+    $('#am-add-pocket').onclick = ()=> openModal({type:'addPocket'});
+    $('#am-pocket-transfer').onclick = ()=> openModal({type:'pocketTransfer', fromId:state.pockets[0]&&state.pockets[0].id, toId:state.pockets[1]&&state.pockets[1].id});
+    root.querySelectorAll('[data-edit-pocket]').forEach(b=> b.onclick = ()=> openModal({type:'editPocket', pocketId:b.dataset.editPocket}));
+    root.querySelectorAll('[data-pocket-detail]').forEach(b=> b.onclick = ()=> openModal({type:'pocketDetail', pocketId:b.dataset.pocketDetail}));
+    root.querySelectorAll('[data-adjust-pocket]').forEach(b=> b.onclick = ()=> openModal({type:'adjustPocket', pocketId:b.dataset.adjustPocket}));
+    root.querySelectorAll('[data-del-pocket]').forEach(b=> b.onclick = ()=> openModal({type:'confirmDel', kind:'pocket', id:b.dataset.delPocket, label:'這個口袋'}));
+
+    $('#am-add-stock').onclick = ()=> openModal({type:'addStock'});
+    root.querySelectorAll('[data-del-stock]').forEach(b=> b.onclick = ()=> openModal({type:'confirmDel', kind:'stock', id:b.dataset.delStock, label:'這筆持股'}));
+
+    $('#am-add-fixed').onclick = ()=> openModal({type:'addFixed'});
+    root.querySelectorAll('[data-del-fixed]').forEach(b=> b.onclick = ()=> openModal({type:'confirmDel', kind:'fixed', id:b.dataset.delFixed, label:'這筆固定支出'}));
+    root.querySelectorAll('[data-toggle-fixed]').forEach(b=>{
+      b.onclick = ()=>{
+        const f = state.fixedExpenses.find(x=>x.id===b.dataset.toggleFixed);
+        if(!f) return;
+        f.paidCycles = f.paidCycles || {};
+        f.paidCycles[cycle.key] = !f.paidCycles[cycle.key];
+        render();
+        persist('am2:fixedExpenses', state.fixedExpenses);
+      };
+    });
+
+    $('#am-add-budget').onclick = ()=> openModal({type:'addBudget'});
+    root.querySelectorAll('[data-budget-mode]').forEach(b=>{
+      b.onclick = ()=>{ if(budgetView.mode!==b.dataset.budgetMode){ toggleMode(budgetView); render(); } };
+    });
+    const bPrev = $('#am-budget-prev'), bNext = $('#am-budget-next');
+    if(bPrev) bPrev.onclick = ()=>{ shiftPeriod(budgetView,-1); render(); };
+    if(bNext) bNext.onclick = ()=>{ shiftPeriod(budgetView,1); render(); };
+    root.querySelectorAll('[data-budget-basis]').forEach(b=>{
+      b.onclick = ()=>{ budgetView.useActualMonths = (b.dataset.budgetBasis==='actual'); render(); };
+    });
+    root.querySelectorAll('[data-del-budget]').forEach(b=> b.onclick = ()=> openModal({type:'confirmDel', kind:'budget', id:b.dataset.delBudget, label:'這筆預算'}));
+
+    root.querySelectorAll('.am-tab').forEach(tab=>{
+      tab.onclick = ()=>{ if(tab.dataset.tab==='asset') return; showToast('「'+tab.querySelector('.am-tab-label').textContent+'」頁籤即將推出,敬請期待'); };
+    });
+
+    const overlay = $('#am-overlay');
+    if(!overlay) return;
+    overlay.addEventListener('click', e=>{ if(e.target===overlay) closeModal(); });
+    const cancel = $('#am-cancel'); if(cancel) cancel.onclick = closeModal;
+
+    if(modal.type==='txDetail'){
+      root.querySelectorAll('[data-tx-mode]').forEach(b=>{
+        b.onclick = ()=>{ if(txView.mode!==b.dataset.txMode){ toggleMode(txView); render(); } };
+      });
+      const tPrev = $('#am-tx-prev'), tNext = $('#am-tx-next');
+      if(tPrev) tPrev.onclick = ()=>{ shiftPeriod(txView,-1); render(); };
+      if(tNext) tNext.onclick = ()=>{ shiftPeriod(txView,1); render(); };
+      root.querySelectorAll('[data-tx-group]').forEach(b=>{
+        b.onclick = ()=>{ txView.group = b.dataset.txGroup; render(); };
+      });
+    }
+
+    if(modal.type==='quickEntry'){
+      $('#am-save-quick-entry').onclick = ()=>{
+        const item = [...state.quickItems.expense, ...state.quickItems.income].find(q=>q.id===modal.itemId);
+        const amount = parseFloat($('#am-qe-amount').value);
+        const pocketId = $('#am-qe-pocket').value;
+        const date = $('#am-qe-date').value;
+        const note = $('#am-qe-note').value.trim();
+        if(!amount || amount<=0){ showToast('請輸入正確金額'); return; }
+        const pocket = state.pockets.find(p=>p.id===pocketId);
+        if(!pocket){ showToast('請先新增一個口袋'); return; }
+        if(!date){ showToast('請選擇日期'); return; }
+        const signed = item.type==='income' ? Math.abs(amount) : -Math.abs(amount);
+        const nowTime = new Date().toTimeString().slice(0,8);
+        state.ledger.push({id:uid('lg'), type:item.type==='income'?'收入':'支出', datetime:date+'T'+nowTime, account:pocket.account, amount:signed, cat1:item.cat1, cat2:item.cat2, note});
+        state.lastPocketId = pocketId;
+        closeModal(); showToast('已記一筆');
+        persist('am2:ledger', state.ledger);
+        persist('am2:lastPocket', state.lastPocketId);
+      };
+    }
+    if(modal.type==='manageQuick'){
+      root.querySelectorAll('[data-set-quicktype]').forEach(b=>{
+        b.onclick = ()=>{ modal.newType=b.dataset.setQuicktype; render(); };
+      });
+      root.querySelectorAll('[data-del-quick]').forEach(b=>{
+        b.onclick = ()=>{
+          const id = b.dataset.delQuick;
+          state.quickItems.expense = state.quickItems.expense.filter(q=>q.id!==id);
+          state.quickItems.income = state.quickItems.income.filter(q=>q.id!==id);
+          render();
+          persist('am2:quickItems', state.quickItems);
+        };
+      });
+      $('#am-save-quickitem').onclick = ()=>{
+        const cat1 = $('#am-qi-cat1').value.trim();
+        const cat2 = $('#am-qi-cat2').value.trim();
+        if(!cat1 || !cat2){ showToast('請輸入分類名稱'); return; }
+        const type = modal.newType||'expense';
+        const newItem = {id:uid('qi'), type, cat1, cat2};
+        if(type==='income') state.quickItems.income.push(newItem); else state.quickItems.expense.push(newItem);
+        modal.newCat1=''; modal.newCat2='';
+        render(); showToast('已新增快速項目');
+        persist('am2:quickItems', state.quickItems);
+      };
+    }
+    if(modal.type==='addPocket'){
+      root.querySelectorAll('[data-set-pkcat]').forEach(b=>{
+        b.onclick = ()=>{
+          modal.name = $('#am-pk-name').value; modal.note = $('#am-pk-note').value; modal.startingBalance = $('#am-pk-balance').value;
+          modal.category = b.dataset.setPkcat; render();
+        };
+      });
+      $('#am-save-pocket').onclick = ()=>{
+        const name = $('#am-pk-name').value.trim();
+        const note = $('#am-pk-note').value.trim();
+        const bal = parseFloat($('#am-pk-balance').value)||0;
+        const category = modal.category || 'cash';
+        if(!name){ showToast('請輸入口袋名稱'); return; }
+        state.pockets.push({id:uid('pk'), account:'manual:'+uid('a'), name, note, category, startingBalance:bal, manualAdjustments:[]});
+        closeModal(); showToast('已新增口袋');
+        persist('am2:pockets', state.pockets);
+      };
+    }
+    if(modal.type==='editPocket'){
+      root.querySelectorAll('[data-set-epcat]').forEach(b=>{
+        b.onclick = ()=>{ modal.category = b.dataset.setEpcat; render(); };
+      });
+      $('#am-save-editpocket').onclick = ()=>{
+        const name = $('#am-ep-name').value.trim();
+        const note = $('#am-ep-note').value.trim();
+        if(!name){ showToast('請輸入口袋名稱'); return; }
+        const pocket = state.pockets.find(p=>p.id===modal.pocketId);
+        if(pocket){ pocket.name = name; pocket.note = note; if(modal.category) pocket.category = modal.category; }
+        closeModal(); showToast('已更新口袋');
+        persist('am2:pockets', state.pockets);
+      };
+    }
+    if(modal.type==='pocketTransfer'){
+      $('#am-save-transfer').onclick = ()=>{
+        const fromId = $('#am-tr-from').value, toId = $('#am-tr-to').value;
+        const amount = parseFloat($('#am-tr-amount').value);
+        const fee = parseFloat($('#am-tr-fee').value)||0;
+        const date = $('#am-tr-date').value;
+        const note = $('#am-tr-note').value.trim();
+        if(fromId===toId){ showToast('轉出跟轉入不能是同一個口袋'); return; }
+        if(!amount || amount<=0){ showToast('請輸入正確金額'); return; }
+        if(!date){ showToast('請選擇日期'); return; }
+        const fromPocket = state.pockets.find(p=>p.id===fromId);
+        const toPocket = state.pockets.find(p=>p.id===toId);
+        if(!fromPocket || !toPocket){ showToast('請選擇口袋'); return; }
+        const nowTime = new Date().toTimeString().slice(0,8);
+        const dt = date+'T'+nowTime;
+        state.ledger.push({id:uid('lg'), type:'支出', datetime:dt, account:fromPocket.account, amount:-amount, cat1:'轉帳', cat2:'轉帳', note});
+        state.ledger.push({id:uid('lg'), type:'收入', datetime:dt, account:toPocket.account, amount:amount, cat1:'轉帳', cat2:'轉帳', note});
+        if(fee>0){
+          state.ledger.push({id:uid('lg'), type:'支出', datetime:dt, account:fromPocket.account, amount:-fee, cat1:'手續費', cat2:'轉帳手續費', note});
+        }
+        closeModal(); showToast('已完成轉帳');
+        persist('am2:ledger', state.ledger);
+      };
+    }
+    if(modal.type==='adjustPocket'){
+      $('#am-save-adjust').onclick = ()=>{
+        const amount = parseFloat($('#am-adj-amount').value);
+        const note = $('#am-adj-note').value.trim();
+        if(!amount){ showToast('請輸入金額'); return; }
+        const pocket = state.pockets.find(p=>p.id===modal.pocketId);
+        pocket.manualAdjustments = pocket.manualAdjustments || [];
+        pocket.manualAdjustments.push({id:uid('adj'), date:new Date().toISOString().slice(0,10), amount, note});
+        closeModal(); showToast('已調整餘額');
+        persist('am2:pockets', state.pockets);
+      };
+    }
+    if(modal.type==='addStock'){
+      $('#am-save-stock').onclick = ()=>{
+        const name = $('#am-st-name').value.trim();
+        const shares = parseFloat($('#am-st-shares').value)||0;
+        const cost = parseFloat($('#am-st-cost').value)||0;
+        const marketValue = parseFloat($('#am-st-value').value)||0;
+        if(!name){ showToast('請輸入股票名稱'); return; }
+        state.stocks.push({id:uid('st'), name, shares, cost, marketValue});
+        closeModal(); showToast('已新增持股');
+        persist('am2:stocks', state.stocks);
+      };
+    }
+    if(modal.type==='addFixed'){
+      $('#am-save-fixed').onclick = ()=>{
+        const name = $('#am-fx-name').value.trim();
+        const amount = parseFloat($('#am-fx-amount').value);
+        const pocketId = $('#am-fx-pocket').value || null;
+        if(!name){ showToast('請輸入名稱'); return; }
+        if(!amount || amount<=0){ showToast('請輸入正確金額'); return; }
+        state.fixedExpenses.push({id:uid('fx'), name, amount, pocketId, paidCycles:{}});
+        closeModal(); showToast('已新增固定支出');
+        persist('am2:fixedExpenses', state.fixedExpenses);
+      };
+    }
+    if(modal.type==='addBudget'){
+      const pocketSel = $('#am-bg-pocket');
+      if(pocketSel) pocketSel.onchange = ()=>{
+        modal.name = $('#am-bg-name').value;
+        modal.amount = $('#am-bg-amount').value;
+        modal.pocketId = pocketSel.value || null;
+        render();
+      };
+      const applyBtn = $('#am-apply-suggest');
+      if(applyBtn) applyBtn.onclick = ()=>{
+        const pocket = state.pockets.find(p=>p.id===modal.pocketId);
+        const avg = pocket ? avgMonthlyExpense(pocket.account) : null;
+        if(avg!==null){ modal.amount = Math.round(avg); modal.name = $('#am-bg-name').value; render(); }
+      };
+      $('#am-save-budget').onclick = ()=>{
+        const name = $('#am-bg-name').value.trim();
+        const amount = parseFloat($('#am-bg-amount').value);
+        const pocketId = $('#am-bg-pocket').value || null;
+        if(!name){ showToast('請輸入名稱'); return; }
+        if(!pocketId){ showToast('請選擇口袋'); return; }
+        if(!amount || amount<=0){ showToast('請輸入正確金額'); return; }
+        state.budgets.push({id:uid('bg'), name, amount, pocketId});
+        closeModal(); showToast('已新增預算');
+        persist('am2:budgets', state.budgets);
+      };
+    }
+    if(modal.type==='setPayday'){
+      $('#am-save-payday').onclick = ()=>{
+        const thisDay = parseInt($('#am-py-this').value);
+        const defDay = parseInt($('#am-py-default').value);
+        state.payday.overrides = state.payday.overrides || {};
+        if(thisDay) state.payday.overrides[thisYM] = thisDay;
+        if(defDay) state.payday.defaultDay = defDay;
+        closeModal(); showToast('已更新發薪日設定');
+        persist('am2:payday', state.payday);
+      };
+    }
+    if(modal.type==='setGoal'){
+      $('#am-save-goal').onclick = ()=>{
+        const target = parseFloat($('#am-goal-target').value);
+        const deadline = $('#am-goal-date').value;
+        if(!target || target<=0){ showToast('請輸入正確目標金額'); return; }
+        state.goal = {target, deadline};
+        closeModal(); showToast('已更新目標');
+        persist('am:goal', state.goal);
+      };
+    }
+    if(modal.type==='confirmDel'){
+      $('#am-confirm-del').onclick = ()=>{
+        const {kind,id} = modal;
+        if(kind==='pocket'){ state.pockets = state.pockets.filter(p=>p.id!==id); persist('am2:pockets', state.pockets); }
+        if(kind==='stock'){ state.stocks = state.stocks.filter(s=>s.id!==id); persist('am2:stocks', state.stocks); }
+        if(kind==='fixed'){ state.fixedExpenses = state.fixedExpenses.filter(f=>f.id!==id); persist('am2:fixedExpenses', state.fixedExpenses); }
+        if(kind==='budget'){ state.budgets = state.budgets.filter(b=>b.id!==id); persist('am2:budgets', state.budgets); }
+        modal=null; render(); showToast('已刪除');
+      };
+    }
+  }
+
+  loadAll().catch(e=>{
+    console.error('loadAll fatal error', e);
+    root.innerHTML = '<div style="padding:32px 20px;font-family:sans-serif;color:#3a2f1f;background:#FAF6EC;min-height:100vh;">'
+      + '<div style="font-weight:700;margin-bottom:8px;font-size:16px;">載入時發生錯誤</div>'
+      + '<div style="font-size:13px;color:#5b6155;line-height:1.6;">重新整理一次通常就會恢復。如果一直發生,麻煩把下面這行錯誤訊息回報給我:</div>'
+      + '<div style="margin-top:10px;font-size:11px;background:#fff;border:1px solid #E3DAC2;border-radius:8px;padding:10px;word-break:break-all;">'
+      + String(e && e.message ? e.message : e).replace(/</g,'&lt;') + '</div></div>';
+  });
+})();
+</script>
