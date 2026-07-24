@@ -49,6 +49,9 @@
   .am-cycle-text{ font-size:11.5px; color:var(--ink-soft); margin-top:3px; }
 
   .am-body{ padding:16px 16px 8px; }
+  .am-subtab-bar{ display:flex; gap:6px; margin-bottom:14px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .am-subtab-btn{ flex:1 0 auto; white-space:nowrap; text-align:center; padding:10px 12px; border-radius:10px; border:1px solid var(--hairline); background:var(--paper-card); font-size:12.5px; font-weight:700; color:var(--ink-soft); cursor:pointer; }
+  .am-subtab-btn.sel{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
   .am-card{
     background:var(--paper-card); border-radius:var(--radius); box-shadow:var(--shadow);
     border:1px solid var(--hairline); padding:18px; margin-bottom:16px;
@@ -237,6 +240,7 @@
   let budgetView = { mode:'month', period:null, useActualMonths:false };
   let txView = { mode:'month', period:null, group:'detail' };
   let quickCatFilter = null;
+  let assetSubTab = '收支';
   let toastTimer = null;
 
   function uid(p){ return p+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
@@ -486,6 +490,19 @@
     return Array.from(set).filter(Boolean).sort((a,b)=>a.localeCompare(b,'zh-Hant'));
   }
 
+  function avgMonthlyNetFlow(){
+    const byMonth = {};
+    state.ledger.forEach(l=>{
+      if(EXCLUDED_FLOW_CATS.includes(l.cat1)) return;
+      const ym = l.datetime.slice(0,7);
+      byMonth[ym] = (byMonth[ym]||0) + l.amount;
+    });
+    const months = Object.keys(byMonth);
+    if(months.length===0) return {rate:0, months:0};
+    const total = months.reduce((s,m)=>s+byMonth[m],0);
+    return {rate: total/months.length, months: months.length};
+  }
+
   function avgMonthlyExpense(account){
     if(!account) return null;
     const byMonth = {};
@@ -562,6 +579,65 @@
   function closeModal(){ modal=null; render(); }
 
   // ---------- render ----------
+  function renderTxSection(){
+    const len = txView.mode==='month' ? 7 : 4;
+    const rows = state.ledger.filter(l=>l.datetime.slice(0,len)===txView.period && !EXCLUDED_FLOW_CATS.includes(l.cat1)).sort((a,b)=>b.datetime.localeCompare(a.datetime));
+    const totalIncome = rows.filter(l=>l.type==='收入').reduce((s,l)=>s+Math.abs(l.amount),0);
+    const totalExpense = rows.filter(l=>l.type==='支出').reduce((s,l)=>s+Math.abs(l.amount),0);
+
+    let bodyHtml;
+    if(txView.group==='detail'){
+      bodyHtml = rows.length===0 ? '<div class="am-empty">這段期間沒有紀錄</div>' : rows.map(l=>`
+        <div class="am-row">
+          <div class="am-row-main">
+            <div class="am-row-name">${escapeHtml(l.cat1)}${l.cat2?('・'+escapeHtml(l.cat2)):''}</div>
+            <div class="am-row-sub">${l.datetime.slice(0,10)}・${escapeHtml(l.account)}${l.note?('・'+escapeHtml(l.note)):''}</div>
+          </div>
+          <div class="am-row-amt ${l.type==='收入'?'inc':'exp'} am-num">${l.type==='收入'?'+':'-'}${Math.abs(l.amount).toLocaleString('zh-Hant-TW')}</div>
+          <button class="am-adj-btn" data-edit-tx="${l.id}" style="margin-left:6px;">編輯</button>
+        </div>`).join('');
+    } else {
+      const map = {};
+      rows.forEach(l=>{
+        const key = l.type+'|'+l.cat1;
+        if(!map[key]) map[key] = {type:l.type, cat1:l.cat1, total:0, count:0};
+        map[key].total += Math.abs(l.amount);
+        map[key].count += 1;
+      });
+      const groups = Object.values(map).sort((a,b)=>b.total-a.total);
+      bodyHtml = groups.length===0 ? '<div class="am-empty">這段期間沒有紀錄</div>' : groups.map(g=>`
+        <div class="am-row">
+          <div class="am-row-main">
+            <div class="am-row-name">${escapeHtml(g.cat1)}</div>
+            <div class="am-row-sub">${g.count} 筆</div>
+          </div>
+          <div class="am-row-amt ${g.type==='收入'?'inc':'exp'} am-num">${g.type==='收入'?'+':'-'}${g.total.toLocaleString('zh-Hant-TW')}</div>
+        </div>`).join('');
+    }
+
+    return `
+      <div class="am-card">
+        <div class="am-section-title">收支明細</div>
+        <div class="am-budget-view-bar">
+          <div class="am-budget-mode-toggle">
+            <button class="am-view-toggle ${txView.mode==='month'?'sel':''}" data-tx-mode="month">月</button>
+            <button class="am-view-toggle ${txView.mode==='year'?'sel':''}" data-tx-mode="year">年</button>
+          </div>
+          <div class="am-period-nav">
+            <button id="am-tx-prev">‹</button>
+            <span class="am-period-label">${txView.mode==='month'?txView.period:(txView.period+'年')}</span>
+            <button id="am-tx-next">›</button>
+          </div>
+        </div>
+        <div class="am-budget-basis-row">
+          <button class="am-basis-chip ${txView.group==='detail'?'sel':''}" data-tx-group="detail">細項</button>
+          <button class="am-basis-chip ${txView.group==='category'?'sel':''}" data-tx-group="category">大項目</button>
+        </div>
+        <div class="am-hint" style="margin-top:0;">這段期間收入 <b style="color:var(--green)">${fmtMoney(totalIncome)}</b>・支出 <b style="color:var(--rust)">${fmtMoney(totalExpense)}</b>(帳戶間轉帳不算在內,轉帳手續費仍算支出)</div>
+        <div class="am-list">${bodyHtml}</div>
+      </div>`;
+  }
+
   function renderPocketRow(pocket, proj){
     return `
     <div class="am-row">
@@ -626,7 +702,14 @@
       </div>
       <div class="am-body">
 
-        ${shortfalls.length>0 ? `
+        <div class="am-subtab-bar">
+          <button class="am-subtab-btn ${assetSubTab==='收支'?'sel':''}" data-asset-subtab="收支">收支管理</button>
+          <button class="am-subtab-btn ${assetSubTab==='預算'?'sel':''}" data-asset-subtab="預算">預算</button>
+          <button class="am-subtab-btn ${assetSubTab==='存錢'?'sel':''}" data-asset-subtab="存錢">存錢計畫執行</button>
+          <button class="am-subtab-btn ${assetSubTab==='資產'?'sel':''}" data-asset-subtab="資產">資產</button>
+        </div>
+
+        ${shortfalls.length>0 && assetSubTab==='收支' ? `
         <div class="am-warning-banner">
           <div class="t">⚠️ 這幾個口袋在下次發薪前可能不夠用</div>
           <ul>
@@ -634,6 +717,7 @@
           </ul>
         </div>` : ''}
 
+        ${assetSubTab==='存錢' ? `
         <div class="am-card am-net-card">
           <div class="am-net-info">
             <div class="am-net-eyebrow">總資產淨值(現金口袋+股票)</div>
@@ -646,8 +730,45 @@
           </div>
         </div>
 
+        ${(()=>{
+          const {rate, months} = avgMonthlyNetFlow();
+          const remaining = Math.max((state.goal.target||0) - totalAssets, 0);
+          const monthsNeeded = rate>0 ? Math.ceil(remaining/rate) : null;
+          let etaText = '';
+          if(monthsNeeded!==null){
+            const d = new Date(); d.setMonth(d.getMonth()+monthsNeeded);
+            etaText = '約 '+monthsNeeded+' 個月後達成(預估 '+d.getFullYear()+'-'+pad(d.getMonth()+1)+')';
+          }
+          return `
+          <div class="am-card">
+            <div class="am-section-title">存錢計畫執行</div>
+            <div class="am-row" style="border-bottom:1px solid var(--hairline);">
+              <div class="am-row-main">
+                <div class="am-row-name">平均每月存下</div>
+                <div class="am-row-sub">依過去 ${months} 個月的收支資料計算</div>
+              </div>
+              <div class="am-row-amt am-num" style="color:${rate>=0?'var(--green)':'var(--rust)'}">${fmtMoney(rate)}</div>
+            </div>
+            <div class="am-row" style="border-bottom:1px solid var(--hairline);">
+              <div class="am-row-main"><div class="am-row-name">距離目標還差</div></div>
+              <div class="am-row-amt am-num">${fmtMoney(remaining)}</div>
+            </div>
+            <div class="am-row">
+              <div class="am-row-main">
+                <div class="am-row-name">以目前速度估計</div>
+                ${monthsNeeded===null ? '<div class="am-row-sub" style="color:var(--rust);">目前平均是負的或沒有資料,暫時無法估計時間,建議先檢視收支</div>' : ''}
+              </div>
+              ${monthsNeeded!==null ? `<div class="am-row-amt am-num" style="font-size:13px;">${etaText}</div>` : ''}
+            </div>
+          </div>`;
+        })()}
+
+        <div class="am-manage-link" id="am-set-goal">設定存錢目標</div>
+        ` : ''}
+
+        ${assetSubTab==='收支' ? `
         <div class="am-card">
-          <div class="am-section-title">快速記帳 <span style="display:flex; gap:10px;"><button class="am-add-btn" id="am-view-tx">查看收支明細</button><button class="am-add-btn" id="am-manage-quick">管理項目</button></span></div>
+          <div class="am-section-title">快速記帳 <button class="am-add-btn" id="am-manage-quick">管理項目</button></div>
           ${(()=>{
             const cat1List = [];
             state.quickItems.expense.forEach(q=>{ if(!cat1List.includes(q.cat1)) cat1List.push(q.cat1); });
@@ -666,7 +787,10 @@
           })()}
         </div>
 
+        ${renderTxSection()}
+        ` : ''}
 
+        ${assetSubTab==='資產' ? `
         <div class="am-card">
           <div class="am-section-title">現金口袋 <span style="display:flex; gap:10px;"><button class="am-add-btn" id="am-pocket-transfer">轉帳</button><button class="am-add-btn" id="am-add-pocket">＋ 新增口袋</button></span></div>
           <div class="am-list">
@@ -708,7 +832,9 @@
               }).join('')}
           </div>
         </div>
+        ` : ''}
 
+        ${assetSubTab==='預算' ? `
         <div class="am-card">
           <div class="am-section-title">固定支出(預扣帳戶) <button class="am-add-btn" id="am-add-fixed">＋ 新增固定支出</button></div>
           <div class="am-list">
@@ -773,8 +899,7 @@
               }); })().join('')}
           </div>
         </div>
-
-        <div class="am-manage-link" id="am-set-goal">設定存錢目標</div>
+        ` : ''}
       </div>
 
       <div class="am-tabbar-bg"></div>
@@ -792,66 +917,6 @@
   }
 
   function renderModal(cycle, thisYM){
-    if(modal.type==='txDetail'){
-      const len = txView.mode==='month' ? 7 : 4;
-      const rows = state.ledger.filter(l=>l.datetime.slice(0,len)===txView.period && !EXCLUDED_FLOW_CATS.includes(l.cat1)).sort((a,b)=>b.datetime.localeCompare(a.datetime));
-      const totalIncome = rows.filter(l=>l.type==='收入').reduce((s,l)=>s+Math.abs(l.amount),0);
-      const totalExpense = rows.filter(l=>l.type==='支出').reduce((s,l)=>s+Math.abs(l.amount),0);
-
-      let bodyHtml;
-      if(txView.group==='detail'){
-        bodyHtml = rows.length===0 ? '<div class="am-empty">這段期間沒有紀錄</div>' : rows.map(l=>`
-          <div class="am-row">
-            <div class="am-row-main">
-              <div class="am-row-name">${escapeHtml(l.cat1)}${l.cat2?('・'+escapeHtml(l.cat2)):''}</div>
-              <div class="am-row-sub">${l.datetime.slice(0,10)}・${escapeHtml(l.account)}${l.note?('・'+escapeHtml(l.note)):''}</div>
-            </div>
-            <div class="am-row-amt ${l.type==='收入'?'inc':'exp'} am-num">${l.type==='收入'?'+':'-'}${Math.abs(l.amount).toLocaleString('zh-Hant-TW')}</div>
-            <button class="am-adj-btn" data-edit-tx="${l.id}" style="margin-left:6px;">編輯</button>
-          </div>`).join('');
-      } else {
-        const map = {};
-        rows.forEach(l=>{
-          const key = l.type+'|'+l.cat1;
-          if(!map[key]) map[key] = {type:l.type, cat1:l.cat1, total:0, count:0};
-          map[key].total += Math.abs(l.amount);
-          map[key].count += 1;
-        });
-        const groups = Object.values(map).sort((a,b)=>b.total-a.total);
-        bodyHtml = groups.length===0 ? '<div class="am-empty">這段期間沒有紀錄</div>' : groups.map(g=>`
-          <div class="am-row">
-            <div class="am-row-main">
-              <div class="am-row-name">${escapeHtml(g.cat1)}</div>
-              <div class="am-row-sub">${g.count} 筆</div>
-            </div>
-            <div class="am-row-amt ${g.type==='收入'?'inc':'exp'} am-num">${g.type==='收入'?'+':'-'}${g.total.toLocaleString('zh-Hant-TW')}</div>
-          </div>`).join('');
-      }
-
-      return `
-      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
-        <div class="am-sheet-title">收支明細</div>
-        <div class="am-budget-view-bar">
-          <div class="am-budget-mode-toggle">
-            <button class="am-view-toggle ${txView.mode==='month'?'sel':''}" data-tx-mode="month">月</button>
-            <button class="am-view-toggle ${txView.mode==='year'?'sel':''}" data-tx-mode="year">年</button>
-          </div>
-          <div class="am-period-nav">
-            <button id="am-tx-prev">‹</button>
-            <span class="am-period-label">${txView.mode==='month'?txView.period:(txView.period+'年')}</span>
-            <button id="am-tx-next">›</button>
-          </div>
-        </div>
-        <div class="am-budget-basis-row">
-          <button class="am-basis-chip ${txView.group==='detail'?'sel':''}" data-tx-group="detail">細項</button>
-          <button class="am-basis-chip ${txView.group==='category'?'sel':''}" data-tx-group="category">大項目</button>
-        </div>
-        <div class="am-hint" style="margin-top:0;">這段期間收入 <b style="color:var(--green)">${fmtMoney(totalIncome)}</b>・支出 <b style="color:var(--rust)">${fmtMoney(totalExpense)}</b>(帳戶間轉帳不算在內,轉帳手續費仍算支出)</div>
-        <div class="am-list">${bodyHtml}</div>
-        <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">關閉</button></div>
-      </div></div>`;
-    }
-
     if(modal.type==='editTx'){
       const tx = state.ledger.find(l=>l.id===modal.txId);
       if(!tx) return '';
@@ -1113,29 +1178,44 @@
     const $ = sel=>root.querySelector(sel);
 
     $('#am-open-payday').onclick = ()=> openModal({type:'setPayday'});
-    $('#am-goal-ring').onclick = ()=> openModal({type:'setGoal', target:state.goal.target, deadline:state.goal.deadline});
+    const goalRing = $('#am-goal-ring'); if(goalRing) goalRing.onclick = ()=> openModal({type:'setGoal', target:state.goal.target, deadline:state.goal.deadline});
 
-    $('#am-manage-quick').onclick = ()=> openModal({type:'manageQuick', newType:'expense'});
-    $('#am-view-tx').onclick = ()=> openModal({type:'txDetail'});
+    const manageQuickBtn = $('#am-manage-quick'); if(manageQuickBtn) manageQuickBtn.onclick = ()=> openModal({type:'manageQuick', newType:'expense'});
     root.querySelectorAll('[data-quick-cat]').forEach(b=>{
       b.onclick = ()=>{ quickCatFilter = b.dataset.quickCat; render(); };
     });
     root.querySelectorAll('[data-quick]').forEach(b=>{
       b.onclick = ()=> openModal({type:'quickEntry', itemId:b.dataset.quick});
     });
-    $('#am-set-goal').onclick = ()=> openModal({type:'setGoal', target:state.goal.target, deadline:state.goal.deadline});
+    const setGoalLink = $('#am-set-goal'); if(setGoalLink) setGoalLink.onclick = ()=> openModal({type:'setGoal', target:state.goal.target, deadline:state.goal.deadline});
 
-    $('#am-add-pocket').onclick = ()=> openModal({type:'addPocket'});
-    $('#am-pocket-transfer').onclick = ()=> openModal({type:'pocketTransfer', fromId:state.pockets[0]&&state.pockets[0].id, toId:state.pockets[1]&&state.pockets[1].id});
+    root.querySelectorAll('[data-asset-subtab]').forEach(b=>{
+      b.onclick = ()=>{ assetSubTab = b.dataset.assetSubtab; render(); };
+    });
+    root.querySelectorAll('[data-tx-mode]').forEach(b=>{
+      b.onclick = ()=>{ if(txView.mode!==b.dataset.txMode){ toggleMode(txView); render(); } };
+    });
+    const tPrev = $('#am-tx-prev'), tNext = $('#am-tx-next');
+    if(tPrev) tPrev.onclick = ()=>{ shiftPeriod(txView,-1); render(); };
+    if(tNext) tNext.onclick = ()=>{ shiftPeriod(txView,1); render(); };
+    root.querySelectorAll('[data-tx-group]').forEach(b=>{
+      b.onclick = ()=>{ txView.group = b.dataset.txGroup; render(); };
+    });
+    root.querySelectorAll('[data-edit-tx]').forEach(b=>{
+      b.onclick = ()=>{ openModal({type:'editTx', txId:b.dataset.editTx}); };
+    });
+
+    const addPocketBtn = $('#am-add-pocket'); if(addPocketBtn) addPocketBtn.onclick = ()=> openModal({type:'addPocket'});
+    const transferBtn = $('#am-pocket-transfer'); if(transferBtn) transferBtn.onclick = ()=> openModal({type:'pocketTransfer', fromId:state.pockets[0]&&state.pockets[0].id, toId:state.pockets[1]&&state.pockets[1].id});
     root.querySelectorAll('[data-edit-pocket]').forEach(b=> b.onclick = ()=> openModal({type:'editPocket', pocketId:b.dataset.editPocket}));
     root.querySelectorAll('[data-pocket-detail]').forEach(b=> b.onclick = ()=> openModal({type:'pocketDetail', pocketId:b.dataset.pocketDetail}));
     root.querySelectorAll('[data-adjust-pocket]').forEach(b=> b.onclick = ()=> openModal({type:'adjustPocket', pocketId:b.dataset.adjustPocket}));
     root.querySelectorAll('[data-del-pocket]').forEach(b=> b.onclick = ()=> openModal({type:'confirmDel', kind:'pocket', id:b.dataset.delPocket, label:'這個口袋'}));
 
-    $('#am-add-stock').onclick = ()=> openModal({type:'addStock'});
+    const addStockBtn = $('#am-add-stock'); if(addStockBtn) addStockBtn.onclick = ()=> openModal({type:'addStock'});
     root.querySelectorAll('[data-del-stock]').forEach(b=> b.onclick = ()=> openModal({type:'confirmDel', kind:'stock', id:b.dataset.delStock, label:'這筆持股'}));
 
-    $('#am-add-fixed').onclick = ()=> openModal({type:'addFixed'});
+    const addFixedBtn = $('#am-add-fixed'); if(addFixedBtn) addFixedBtn.onclick = ()=> openModal({type:'addFixed'});
     root.querySelectorAll('[data-del-fixed]').forEach(b=> b.onclick = ()=> openModal({type:'confirmDel', kind:'fixed', id:b.dataset.delFixed, label:'這筆固定支出'}));
     root.querySelectorAll('[data-toggle-fixed]').forEach(b=>{
       b.onclick = ()=>{
@@ -1148,7 +1228,7 @@
       };
     });
 
-    $('#am-add-budget').onclick = ()=> openModal({type:'addBudget'});
+    const addBudgetBtn = $('#am-add-budget'); if(addBudgetBtn) addBudgetBtn.onclick = ()=> openModal({type:'addBudget'});
     root.querySelectorAll('[data-budget-mode]').forEach(b=>{
       b.onclick = ()=>{ if(budgetView.mode!==b.dataset.budgetMode){ toggleMode(budgetView); render(); } };
     });
@@ -1168,21 +1248,6 @@
     if(!overlay) return;
     overlay.addEventListener('click', e=>{ if(e.target===overlay) closeModal(); });
     const cancel = $('#am-cancel'); if(cancel) cancel.onclick = closeModal;
-
-    if(modal.type==='txDetail'){
-      root.querySelectorAll('[data-tx-mode]').forEach(b=>{
-        b.onclick = ()=>{ if(txView.mode!==b.dataset.txMode){ toggleMode(txView); render(); } };
-      });
-      const tPrev = $('#am-tx-prev'), tNext = $('#am-tx-next');
-      if(tPrev) tPrev.onclick = ()=>{ shiftPeriod(txView,-1); render(); };
-      if(tNext) tNext.onclick = ()=>{ shiftPeriod(txView,1); render(); };
-      root.querySelectorAll('[data-tx-group]').forEach(b=>{
-        b.onclick = ()=>{ txView.group = b.dataset.txGroup; render(); };
-      });
-      root.querySelectorAll('[data-edit-tx]').forEach(b=>{
-        b.onclick = ()=>{ openModal({type:'editTx', txId:b.dataset.editTx}); };
-      });
-    }
 
     if(modal.type==='editTx'){
       root.querySelectorAll('[data-set-etxtype]').forEach(b=>{
