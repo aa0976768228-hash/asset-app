@@ -201,7 +201,7 @@
     'Line pay money': {name:'Line Pay', note:'', category:'cash'},
     'Quokka': {name:'Quokka', note:'', category:'cash'},
   };
-  const SEED_VERSION = 6;
+  const SEED_VERSION = 7;
   const DEFAULT_POCKET_BALANCES = {
     '未指定帳戶(現金)': 571,
     '中信 吃喝雜支 218-83=135': 6645,
@@ -213,7 +213,7 @@
     'Quokka': 0,
   };
   const DEFAULT_STOCKS = [
-    {name:'0050(群益)', shares:314, cost:29802, marketValue:32546},
+    {name:'0050(群益)', entries:[{date:'2026-07-23', shares:314, cost:29802, marketValue:32546}]},
   ];
   const EXTRA_SEED_LEDGER = [
     {type:'支出', datetime:new Date().toISOString().slice(0,19), account:'中信 吃喝雜支 218-83=135', amount:-50, cat1:'吃喝', cat2:'飲料', note:''},
@@ -353,13 +353,13 @@
       state.budgets = Array.isArray(budgets) ? budgets : [];
       state.ledger = Array.isArray(ledger) ? ledger : [];
       state.payday = (payday && typeof payday==='object') ? payday : {defaultDay:5, overrides:{}};
-      state.goal = (goal && typeof goal==='object') ? goal : {target:1000000, deadline:''};
+      state.goal = (goal && typeof goal==='object') ? goal : {emergencyTarget:0, cashTarget:1000000, stockMonthlyTarget:0, deadline:''};
       state.quickItems = (quickItems && typeof quickItems==='object') ? quickItems : null;
       state.lastPocketId = lastPocketId || null;
     }catch(e){
       console.error(e);
       state.pockets=[]; state.stocks=[]; state.fixedExpenses=[]; state.budgets=[]; state.ledger=[];
-      state.payday={defaultDay:5,overrides:{}}; state.goal={target:1000000,deadline:''};
+      state.payday={defaultDay:5,overrides:{}}; state.goal={emergencyTarget:0, cashTarget:1000000, stockMonthlyTarget:0, deadline:''};
       state.quickItems=null; state.lastPocketId=null;
     }
 
@@ -367,6 +367,24 @@
     const beforeCount = state.pockets.length;
     state.pockets = state.pockets.filter(p=>!EXCLUDED_POCKET_ACCOUNTS.includes(p.account));
     if(state.pockets.length!==beforeCount) await persist('am2:pockets', state.pockets);
+
+    // 保險:把舊格式(沒有 entries 陣列)的股票資料自動轉成新的帶日期紀錄格式
+    let stocksMigrated = false;
+    state.stocks.forEach(st=>{
+      if(!Array.isArray(st.entries)){
+        st.entries = [{id:uid('se'), date:new Date().toISOString().slice(0,10), shares:st.shares||0, cost:st.cost||0, marketValue:st.marketValue||0}];
+        delete st.shares; delete st.cost; delete st.marketValue;
+        stocksMigrated = true;
+      }
+    });
+    if(stocksMigrated) await persist('am2:stocks', state.stocks);
+
+    // 保險:舊版單一目標(target)自動轉成新的三個目標(緊急備用金/手頭現金/股票每月投入)
+    if(state.goal && state.goal.cashTarget===undefined){
+      const oldTarget = state.goal.target || 0;
+      state.goal = { emergencyTarget:0, cashTarget: oldTarget, stockMonthlyTarget:0, deadline: state.goal.deadline||'' };
+      await persist('am:goal', state.goal);
+    }
 
     if(!budgetView.period){
       const n = new Date();
@@ -405,8 +423,9 @@
 
       state.stocks = state.stocks.filter(st=>st.name!=='群益(投資帳戶)');
       DEFAULT_STOCKS.forEach(s=>{
-        if(!state.stocks.find(st=>st.name===s.name)){ state.stocks.push({id:uid('st'), ...s}); }
-        else { const st = state.stocks.find(st=>st.name===s.name); st.shares=s.shares; st.cost=s.cost; st.marketValue=s.marketValue; }
+        const existing = state.stocks.find(st=>st.name===s.name);
+        if(!existing){ state.stocks.push({id:uid('st'), name:s.name, entries:s.entries.map(e=>({id:uid('se'), ...e}))}); }
+        else { existing.entries = s.entries.map(e=>({id:uid('se'), ...e})); }
       });
 
       state.fixedExpenses = DEFAULT_FIXED_EXPENSES.map(f=>{
@@ -490,18 +509,69 @@
     return Array.from(set).filter(Boolean).sort((a,b)=>a.localeCompare(b,'zh-Hant'));
   }
 
-  function avgMonthlyNetFlow(){
-    const byMonth = {};
-    state.ledger.forEach(l=>{
-      if(EXCLUDED_FLOW_CATS.includes(l.cat1)) return;
-      const ym = l.datetime.slice(0,7);
-      byMonth[ym] = (byMonth[ym]||0) + l.amount;
-    });
-    const months = Object.keys(byMonth);
-    if(months.length===0) return {rate:0, months:0};
-    const total = months.reduce((s,m)=>s+byMonth[m],0);
-    return {rate: total/months.length, months: months.length};
+  function completedCycles(){
+    if(state.ledger.length===0) return [];
+    let minDt = state.ledger[0].datetime;
+    state.ledger.forEach(l=>{ if(l.datetime<minDt) minDt=l.datetime; });
+    const minDate = new Date(minDt.slice(0,10));
+    const nowCycle = getCycle(new Date());
+    const cycles = [];
+    let cur = getCycle(minDate);
+    let guard = 0;
+    while(cur.start < nowCycle.start && guard<600){
+      cycles.push(cur);
+      cur = getCycle(cur.end);
+      guard++;
+    }
+    return cycles;
   }
+
+  function avgMonthlyNetFlow(){
+    const cycles = completedCycles();
+    if(cycles.length===0) return {rate:0, months:0};
+    let total = 0;
+    cycles.forEach(cy=>{
+      const sum = state.ledger.filter(l=>{
+        if(EXCLUDED_FLOW_CATS.includes(l.cat1)) return false;
+        const d = new Date(l.datetime);
+        return d >= cy.start && d < cy.end;
+      }).reduce((s,l)=>s+l.amount,0);
+      total += sum;
+    });
+    return {rate: total/cycles.length, months: cycles.length};
+  }
+
+  function stockEntries(st){ return (st.entries||[]).slice().sort((a,b)=>a.date.localeCompare(b.date)); }
+  function stockLatest(st){ const e = stockEntries(st); return e[e.length-1] || {date:'', shares:0, cost:0, marketValue:0}; }
+  function stockMonthlyReturnRate(st){
+    const e = stockEntries(st);
+    if(e.length<2) return null;
+    const first = e[0], last = e[e.length-1];
+    if(first.date===last.date || !(first.marketValue>0)) return null;
+    const d1 = new Date(first.date), d2 = new Date(last.date);
+    const months = Math.max((d2.getFullYear()-d1.getFullYear())*12 + (d2.getMonth()-d1.getMonth()), 1);
+    const growth = last.marketValue / first.marketValue;
+    return (Math.pow(growth, 1/months) - 1) * 100;
+  }
+  function avgMonthlyStockInvestment(){
+    let totalAdded = 0, minDate=null, maxDate=null;
+    state.stocks.forEach(st=>{
+      const e = stockEntries(st);
+      for(let i=1;i<e.length;i++){
+        const added = (e[i].cost||0) - (e[i-1].cost||0);
+        if(added>0) totalAdded += added;
+      }
+      e.forEach(x=>{
+        if(!minDate || x.date<minDate) minDate=x.date;
+        if(!maxDate || x.date>maxDate) maxDate=x.date;
+      });
+    });
+    if(!minDate || !maxDate || minDate===maxDate) return {rate:0, months:0};
+    const d1=new Date(minDate), d2=new Date(maxDate);
+    const months = Math.max((d2.getFullYear()-d1.getFullYear())*12+(d2.getMonth()-d1.getMonth()),1);
+    return {rate: totalAdded/months, months};
+  }
+
 
   function avgMonthlyExpense(account){
     if(!account) return null;
@@ -678,10 +748,14 @@
     const shortfalls = projections.filter(x=>x.proj.projected<0);
 
     const totalCash = state.pockets.reduce((s,p)=>s+pocketBalance(p),0);
-    const totalStock = state.stocks.reduce((s,st)=>s+(st.marketValue||0),0);
+    const currentCashOnly = projections.filter(x=>(x.pocket.category||'cash')!=='savings').reduce((s,x)=>s+x.proj.balance,0);
+    const currentEmergency = projections.filter(x=>x.pocket.category==='savings').reduce((s,x)=>s+x.proj.balance,0);
+    const totalStock = state.stocks.reduce((s,st)=>s+(stockLatest(st).marketValue||0),0);
     const totalAssets = totalCash + totalStock;
-    const goalRatio = state.goal.target>0 ? Math.min(totalAssets/state.goal.target,1) : 0;
-    const goalPct = state.goal.target>0 ? Math.round((totalAssets/state.goal.target)*100) : 0;
+    const savingsTarget = (state.goal.emergencyTarget||0) + (state.goal.cashTarget||0);
+    const savingsCurrent = currentCashOnly + currentEmergency;
+    const goalRatio = savingsTarget>0 ? Math.min(savingsCurrent/savingsTarget,1) : 0;
+    const goalPct = savingsTarget>0 ? Math.round((savingsCurrent/savingsTarget)*100) : 0;
 
     const ringSize=92, stroke=9, r=(ringSize-stroke)/2, c=2*Math.PI*r;
     const ringHtml = `<svg width="${ringSize}" height="${ringSize}" viewBox="0 0 ${ringSize} ${ringSize}">
@@ -720,19 +794,44 @@
         ${assetSubTab==='存錢' ? `
         <div class="am-card am-net-card">
           <div class="am-net-info">
-            <div class="am-net-eyebrow">總資產淨值(現金口袋+股票)</div>
-            <div class="am-net-value am-num">${fmtMoney(totalAssets)}</div>
-            <div class="am-net-breakdown">現金口袋 <b class="am-num">${fmtMoney(totalCash)}</b>(${totalAssets>0?Math.round(totalCash/totalAssets*100):0}%)・股票 <b class="am-num">${fmtMoney(totalStock)}</b>(${totalAssets>0?Math.round(totalStock/totalAssets*100):0}%)</div>
-            <div class="am-net-goal-text">存錢目標達成 <b>${goalPct}%</b>${state.goal.deadline?('・目標日 '+state.goal.deadline):''}</div>
+            <div class="am-net-eyebrow">現金+緊急備用金 存錢目標</div>
+            <div class="am-net-value am-num">${fmtMoney(savingsCurrent)}</div>
+            <div class="am-net-breakdown">目標 <b class="am-num">${fmtMoney(savingsTarget)}</b></div>
+            <div class="am-net-goal-text">達成 <b>${goalPct}%</b>${state.goal.deadline?('・目標日 '+state.goal.deadline):''}</div>
           </div>
           <div class="am-ring-wrap" id="am-goal-ring">${ringHtml}
             <div class="am-ring-pct"><div class="p am-num">${goalPct}%</div><div class="l">達成率</div></div>
           </div>
         </div>
 
+        <div class="am-card">
+          <div class="am-section-title">三項目標對照</div>
+          <div class="am-row" style="border-bottom:1px solid var(--hairline);">
+            <div class="am-row-main"><div class="am-row-name">緊急備用金</div><div class="am-row-sub">目標 ${fmtMoney(state.goal.emergencyTarget||0)}</div></div>
+            <div class="am-row-amt am-num" style="color:${currentEmergency>=(state.goal.emergencyTarget||0)?'var(--green)':'var(--rust)'}">${currentEmergency>=(state.goal.emergencyTarget||0)?'已達成 +':'還差 '}${fmtMoney(Math.abs(currentEmergency-(state.goal.emergencyTarget||0)))}</div>
+          </div>
+          <div class="am-row" style="border-bottom:1px solid var(--hairline);">
+            <div class="am-row-main"><div class="am-row-name">手頭現金</div><div class="am-row-sub">目標 ${fmtMoney(state.goal.cashTarget||0)}</div></div>
+            <div class="am-row-amt am-num" style="color:${currentCashOnly>=(state.goal.cashTarget||0)?'var(--green)':'var(--rust)'}">${currentCashOnly>=(state.goal.cashTarget||0)?'已達成 +':'還差 '}${fmtMoney(Math.abs(currentCashOnly-(state.goal.cashTarget||0)))}</div>
+          </div>
+          ${(()=>{
+            const {rate:stockRate, months:stockMonths} = avgMonthlyStockInvestment();
+            const target = state.goal.stockMonthlyTarget||0;
+            if(stockMonths===0) return `
+            <div class="am-row">
+              <div class="am-row-main"><div class="am-row-name">股票每月投入</div><div class="am-row-sub">目標每月 ${fmtMoney(target)}・還沒有足夠的股票歷史紀錄可以算實際投入速度(至少要更新過 2 次紀錄)</div></div>
+            </div>`;
+            return `
+            <div class="am-row">
+              <div class="am-row-main"><div class="am-row-name">股票每月投入</div><div class="am-row-sub">目標每月 ${fmtMoney(target)}・實際平均每月 ${fmtMoney(stockRate)}(依過去 ${stockMonths} 個月的紀錄)</div></div>
+              <div class="am-row-amt am-num" style="color:${stockRate>=target?'var(--green)':'var(--rust)'}">${stockRate>=target?'已達成 +':'還差 '}${fmtMoney(Math.abs(stockRate-target))}</div>
+            </div>`;
+          })()}
+        </div>
+
         ${(()=>{
           const {rate, months} = avgMonthlyNetFlow();
-          const remaining = Math.max((state.goal.target||0) - totalAssets, 0);
+          const remaining = Math.max(savingsTarget - savingsCurrent, 0);
           const monthsNeeded = rate>0 ? Math.ceil(remaining/rate) : null;
           let etaText = '';
           if(monthsNeeded!==null){
@@ -741,16 +840,16 @@
           }
           return `
           <div class="am-card">
-            <div class="am-section-title">存錢計畫執行</div>
+            <div class="am-section-title">存錢速度預估</div>
             <div class="am-row" style="border-bottom:1px solid var(--hairline);">
               <div class="am-row-main">
-                <div class="am-row-name">平均每月存下</div>
-                <div class="am-row-sub">依過去 ${months} 個月的收支資料計算</div>
+                <div class="am-row-name">平均每期(發薪週期)存下</div>
+                <div class="am-row-sub">只算完整的發薪週期,依過去 ${months} 個完整週期計算</div>
               </div>
               <div class="am-row-amt am-num" style="color:${rate>=0?'var(--green)':'var(--rust)'}">${fmtMoney(rate)}</div>
             </div>
             <div class="am-row" style="border-bottom:1px solid var(--hairline);">
-              <div class="am-row-main"><div class="am-row-name">距離目標還差</div></div>
+              <div class="am-row-main"><div class="am-row-name">現金+緊急備用金 距離目標還差</div></div>
               <div class="am-row-amt am-num">${fmtMoney(remaining)}</div>
             </div>
             <div class="am-row">
@@ -792,6 +891,12 @@
 
         ${assetSubTab==='資產' ? `
         <div class="am-card">
+          <div class="am-net-eyebrow">總資產淨值(現金口袋+股票)</div>
+          <div class="am-net-value am-num">${fmtMoney(totalAssets)}</div>
+          <div class="am-net-breakdown">現金口袋 <b class="am-num">${fmtMoney(totalCash)}</b>(${totalAssets>0?Math.round(totalCash/totalAssets*100):0}%)・股票 <b class="am-num">${fmtMoney(totalStock)}</b>(${totalAssets>0?Math.round(totalStock/totalAssets*100):0}%)</div>
+        </div>
+
+        <div class="am-card">
           <div class="am-section-title">現金口袋 <span style="display:flex; gap:10px;"><button class="am-add-btn" id="am-pocket-transfer">轉帳</button><button class="am-add-btn" id="am-add-pocket">＋ 新增口袋</button></span></div>
           <div class="am-list">
             ${(()=>{
@@ -818,15 +923,18 @@
           <div class="am-list">
             ${state.stocks.length===0 ? '<div class="am-empty">還沒有持股紀錄</div>' :
               state.stocks.map(st=>{
-                const profit = (st.marketValue||0)-(st.cost||0);
-                const rate = st.cost>0 ? (profit/st.cost*100) : 0;
+                const latest = stockLatest(st);
+                const profit = (latest.marketValue||0)-(latest.cost||0);
+                const rate = latest.cost>0 ? (profit/latest.cost*100) : 0;
+                const monthlyRate = stockMonthlyReturnRate(st);
                 return `
                 <div class="am-row">
                   <div class="am-row-main">
                     <div class="am-row-name">${escapeHtml(st.name)}</div>
-                    <div class="am-row-sub">${st.shares||0} 股・成本 ${fmtMoney(st.cost||0)}・損益 <span style="color:${profit>=0?'var(--green)':'var(--rust)'}">${fmtMoney(profit)}(${rate.toFixed(1)}%)</span></div>
+                    <div class="am-row-sub">${latest.shares||0} 股・成本 ${fmtMoney(latest.cost||0)}・損益 <span style="color:${profit>=0?'var(--green)':'var(--rust)'}">${fmtMoney(profit)}(${rate.toFixed(1)}%)</span>${monthlyRate!==null?('・平均每月報酬率 '+monthlyRate.toFixed(2)+'%'):''}</div>
+                    <div class="am-row-sub">最新紀錄日期:${latest.date||'-'} <span class="am-detail-link" data-add-stock-entry="${st.id}">更新紀錄</span></div>
                   </div>
-                  <div class="am-row-amt am-num">${fmtMoney(st.marketValue||0)}</div>
+                  <div class="am-row-amt am-num">${fmtMoney(latest.marketValue||0)}</div>
                   <button class="am-row-del" data-del-stock="${st.id}" title="刪除">✕</button>
                 </div>`;
               }).join('')}
@@ -1100,14 +1208,30 @@
 
     if(modal.type==='addStock') return `
       <div class="am-overlay" id="am-overlay"><div class="am-sheet">
-        <div class="am-sheet-title">${modal.editId?'編輯持股':'新增持股'}</div>
+        <div class="am-sheet-title">新增持股</div>
         <div class="am-field"><label>名稱</label><input type="text" id="am-st-name" value="${modal.name||''}" placeholder="例如:0050"></div>
+        <div class="am-field"><label>日期</label><input type="date" id="am-st-date" value="${new Date().toISOString().slice(0,10)}"></div>
         <div class="am-field"><label>股數</label><input type="number" inputmode="decimal" id="am-st-shares" value="${modal.shares||''}"></div>
         <div class="am-field"><label>投資成本(總額)</label><input type="number" inputmode="decimal" id="am-st-cost" value="${modal.cost||''}"></div>
         <div class="am-field"><label>目前市值(總額)</label><input type="number" inputmode="decimal" id="am-st-value" value="${modal.marketValue||''}"></div>
         <div class="am-hint">損益金額與損益率會自動算,不用手動輸入</div>
         <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-stock">儲存</button></div>
       </div></div>`;
+
+    if(modal.type==='addStockEntry'){
+      const st = state.stocks.find(s=>s.id===modal.stockId);
+      const latest = st ? stockLatest(st) : {shares:0,cost:0,marketValue:0};
+      return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">更新「${escapeHtml(st?st.name:'')}」紀錄</div>
+        <div class="am-hint">新增一筆有日期的紀錄,才能算出平均每月報酬率跟每月投入金額</div>
+        <div class="am-field"><label>日期</label><input type="date" id="am-se-date" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div class="am-field"><label>股數</label><input type="number" inputmode="decimal" id="am-se-shares" value="${latest.shares||''}"></div>
+        <div class="am-field"><label>投資成本(累計總額)</label><input type="number" inputmode="decimal" id="am-se-cost" value="${latest.cost||''}"></div>
+        <div class="am-field"><label>目前市值(總額)</label><input type="number" inputmode="decimal" id="am-se-value" value="${latest.marketValue||''}"></div>
+        <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-stockentry">儲存</button></div>
+      </div></div>`;
+    }
 
     if(modal.type==='addFixed') return `
       <div class="am-overlay" id="am-overlay"><div class="am-sheet">
@@ -1159,7 +1283,9 @@
     if(modal.type==='setGoal') return `
       <div class="am-overlay" id="am-overlay"><div class="am-sheet">
         <div class="am-sheet-title">設定存錢目標</div>
-        <div class="am-field"><label>目標總資產</label><input type="number" inputmode="decimal" id="am-goal-target" value="${modal.target ?? state.goal.target}"></div>
+        <div class="am-field"><label>緊急備用金目標</label><input type="number" inputmode="decimal" id="am-goal-emergency" value="${modal.emergencyTarget ?? state.goal.emergencyTarget ?? 0}"></div>
+        <div class="am-field"><label>手頭現金目標</label><input type="number" inputmode="decimal" id="am-goal-cash" value="${modal.cashTarget ?? state.goal.cashTarget ?? 0}"></div>
+        <div class="am-field"><label>股票每月投入目標</label><input type="number" inputmode="decimal" id="am-goal-stock" value="${modal.stockMonthlyTarget ?? state.goal.stockMonthlyTarget ?? 0}"></div>
         <div class="am-field"><label>目標日期(選填)</label><input type="date" id="am-goal-date" value="${modal.deadline ?? state.goal.deadline}"></div>
         <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-goal">儲存</button></div>
       </div></div>`;
@@ -1178,7 +1304,7 @@
     const $ = sel=>root.querySelector(sel);
 
     $('#am-open-payday').onclick = ()=> openModal({type:'setPayday'});
-    const goalRing = $('#am-goal-ring'); if(goalRing) goalRing.onclick = ()=> openModal({type:'setGoal', target:state.goal.target, deadline:state.goal.deadline});
+    const goalRing = $('#am-goal-ring'); if(goalRing) goalRing.onclick = ()=> openModal({type:'setGoal'});
 
     const manageQuickBtn = $('#am-manage-quick'); if(manageQuickBtn) manageQuickBtn.onclick = ()=> openModal({type:'manageQuick', newType:'expense'});
     root.querySelectorAll('[data-quick-cat]').forEach(b=>{
@@ -1187,7 +1313,7 @@
     root.querySelectorAll('[data-quick]').forEach(b=>{
       b.onclick = ()=> openModal({type:'quickEntry', itemId:b.dataset.quick});
     });
-    const setGoalLink = $('#am-set-goal'); if(setGoalLink) setGoalLink.onclick = ()=> openModal({type:'setGoal', target:state.goal.target, deadline:state.goal.deadline});
+    const setGoalLink = $('#am-set-goal'); if(setGoalLink) setGoalLink.onclick = ()=> openModal({type:'setGoal'});
 
     root.querySelectorAll('[data-asset-subtab]').forEach(b=>{
       b.onclick = ()=>{ assetSubTab = b.dataset.assetSubtab; render(); };
@@ -1213,6 +1339,7 @@
     root.querySelectorAll('[data-del-pocket]').forEach(b=> b.onclick = ()=> openModal({type:'confirmDel', kind:'pocket', id:b.dataset.delPocket, label:'這個口袋'}));
 
     const addStockBtn = $('#am-add-stock'); if(addStockBtn) addStockBtn.onclick = ()=> openModal({type:'addStock'});
+    root.querySelectorAll('[data-add-stock-entry]').forEach(b=> b.onclick = ()=> openModal({type:'addStockEntry', stockId:b.dataset.addStockEntry}));
     root.querySelectorAll('[data-del-stock]').forEach(b=> b.onclick = ()=> openModal({type:'confirmDel', kind:'stock', id:b.dataset.delStock, label:'這筆持股'}));
 
     const addFixedBtn = $('#am-add-fixed'); if(addFixedBtn) addFixedBtn.onclick = ()=> openModal({type:'addFixed'});
@@ -1399,12 +1526,30 @@
     if(modal.type==='addStock'){
       $('#am-save-stock').onclick = ()=>{
         const name = $('#am-st-name').value.trim();
+        const date = $('#am-st-date').value;
         const shares = parseFloat($('#am-st-shares').value)||0;
         const cost = parseFloat($('#am-st-cost').value)||0;
         const marketValue = parseFloat($('#am-st-value').value)||0;
         if(!name){ showToast('請輸入股票名稱'); return; }
-        state.stocks.push({id:uid('st'), name, shares, cost, marketValue});
+        if(!date){ showToast('請選擇日期'); return; }
+        state.stocks.push({id:uid('st'), name, entries:[{id:uid('se'), date, shares, cost, marketValue}]});
         closeModal(); showToast('已新增持股');
+        persist('am2:stocks', state.stocks);
+      };
+    }
+    if(modal.type==='addStockEntry'){
+      $('#am-save-stockentry').onclick = ()=>{
+        const st = state.stocks.find(s=>s.id===modal.stockId);
+        if(!st) return;
+        const date = $('#am-se-date').value;
+        const shares = parseFloat($('#am-se-shares').value)||0;
+        const cost = parseFloat($('#am-se-cost').value)||0;
+        const marketValue = parseFloat($('#am-se-value').value)||0;
+        if(!date){ showToast('請選擇日期'); return; }
+        st.entries = st.entries || [];
+        st.entries = st.entries.filter(e=>e.date!==date); // 同一天重複更新就覆蓋掉
+        st.entries.push({id:uid('se'), date, shares, cost, marketValue});
+        closeModal(); showToast('已更新這筆股票紀錄');
         persist('am2:stocks', state.stocks);
       };
     }
@@ -1459,10 +1604,11 @@
     }
     if(modal.type==='setGoal'){
       $('#am-save-goal').onclick = ()=>{
-        const target = parseFloat($('#am-goal-target').value);
+        const emergencyTarget = parseFloat($('#am-goal-emergency').value)||0;
+        const cashTarget = parseFloat($('#am-goal-cash').value)||0;
+        const stockMonthlyTarget = parseFloat($('#am-goal-stock').value)||0;
         const deadline = $('#am-goal-date').value;
-        if(!target || target<=0){ showToast('請輸入正確目標金額'); return; }
-        state.goal = {target, deadline};
+        state.goal = {emergencyTarget, cashTarget, stockMonthlyTarget, deadline};
         closeModal(); showToast('已更新目標');
         persist('am:goal', state.goal);
       };
