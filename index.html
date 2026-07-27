@@ -77,6 +77,7 @@
   .am-net-goal-text{ font-size:12.5px; color:var(--ink-soft); margin-top:6px; }
   .am-net-breakdown{ font-size:12px; color:var(--ink-soft); margin-top:5px; }
   .am-net-breakdown b{ color:var(--ink); font-weight:700; }
+  .am-split-bar{ height:8px; border-radius:6px; overflow:hidden; display:flex; margin-top:10px; background:var(--hairline); }
   .am-net-goal-text b{ color:var(--gold); font-weight:700; }
   .am-ring-wrap{ position:relative; width:92px; height:92px; flex-shrink:0; cursor:pointer; }
   .am-ring-pct{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; font-family:'Manrope',sans-serif; font-weight:800; }
@@ -712,7 +713,8 @@
         <div class="am-row">
           <div class="am-row-main">
             <div class="am-row-name">${escapeHtml(l.cat1)}${l.cat2?('・'+escapeHtml(l.cat2)):''}</div>
-            <div class="am-row-sub">${l.datetime.slice(0,10)} ${l.datetime.slice(11,16)}・${escapeHtml(accountLabel)}${l.note?('・'+escapeHtml(l.note)):''}</div>
+            <div class="am-row-sub">${l.datetime.slice(0,10)} ${l.datetime.slice(11,16)}</div>
+            <div class="am-row-sub">${escapeHtml(accountLabel)}${l.note?(' / '+escapeHtml(l.note)):''}</div>
           </div>
           <div class="am-row-amt ${l.type==='收入'?'inc':'exp'} am-num">${l.type==='收入'?'+':'-'}${Math.abs(l.amount).toLocaleString('zh-Hant-TW')}</div>
           <button class="am-adj-btn" data-edit-tx="${l.id}" style="margin-left:6px;">編輯</button>
@@ -727,13 +729,17 @@
         map[key].count += 1;
       });
       const groups = Object.values(map).sort((a,b)=>b.total-a.total);
+      const maxTotal = groups.length ? Math.max(...groups.map(g=>g.total)) : 0;
       bodyHtml = groups.length===0 ? '<div class="am-empty">這段期間沒有紀錄</div>' : groups.map(g=>`
-        <div class="am-row" data-tx-drilldown="${escapeHtml(g.cat1)}" style="cursor:pointer;">
-          <div class="am-row-main">
-            <div class="am-row-name">${escapeHtml(g.cat1)}</div>
-            <div class="am-row-sub">${g.count} 筆・點看明細</div>
+        <div class="am-row" data-tx-drilldown="${escapeHtml(g.cat1)}" style="cursor:pointer; flex-direction:column; align-items:stretch;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div class="am-row-main">
+              <div class="am-row-name">${escapeHtml(g.cat1)}</div>
+              <div class="am-row-sub">${g.count} 筆・點看明細</div>
+            </div>
+            <div class="am-row-amt ${g.type==='收入'?'inc':'exp'} am-num">${g.type==='收入'?'+':'-'}${g.total.toLocaleString('zh-Hant-TW')}</div>
           </div>
-          <div class="am-row-amt ${g.type==='收入'?'inc':'exp'} am-num">${g.type==='收入'?'+':'-'}${g.total.toLocaleString('zh-Hant-TW')}</div>
+          <div class="am-progress-bar"><div class="am-progress-fill" style="width:${maxTotal>0?(g.total/maxTotal*100):0}%; background:${g.type==='收入'?'var(--green)':'var(--rust)'}"></div></div>
         </div>`).join('');
     }
 
@@ -894,8 +900,10 @@
                   <div style="display:flex; align-items:center; gap:10px;">
                     <div class="am-row-main">
                       <div class="am-row-name">${escapeHtml(g.name)}</div>
-                      <div class="am-row-sub">帳戶:${escapeHtml(savingsGoalLabel(g))}・目前 ${fmtMoney(current)} / 目標 ${fmtMoney(totalTarget)}</div>
-                      <div class="am-row-sub">每月存入目標 ${fmtMoney(monthlyTarget)}${months>0?('・實際平均每期 '+fmtMoney(actualMonthly)+'(過去 '+months+' 期)'):''}</div>
+                      <div class="am-row-sub">帳戶:${escapeHtml(savingsGoalLabel(g))}</div>
+                      <div class="am-row-sub">目前 ${fmtMoney(current)} / 目標 ${fmtMoney(totalTarget)}</div>
+                      <div class="am-row-sub">每月存入目標 ${fmtMoney(monthlyTarget)}</div>
+                      ${months>0?`<div class="am-row-sub">實際平均每期 ${fmtMoney(actualMonthly)}(過去 ${months} 期)</div>`:''}
                       <div class="am-row-sub">${etaText}</div>
                     </div>
                     <button class="am-adj-btn" data-edit-savingsgoal="${g.id}">編輯</button>
@@ -937,6 +945,10 @@
           <div class="am-net-eyebrow">總資產淨值(現金口袋+股票)</div>
           <div class="am-net-value am-num">${fmtMoney(totalAssets)}</div>
           <div class="am-net-breakdown">現金口袋 <b class="am-num">${fmtMoney(totalCash)}</b>(${totalAssets>0?Math.round(totalCash/totalAssets*100):0}%)・股票 <b class="am-num">${fmtMoney(totalStock)}</b>(${totalAssets>0?Math.round(totalStock/totalAssets*100):0}%)</div>
+          <div class="am-split-bar">
+            <div style="width:${totalAssets>0?(totalCash/totalAssets*100):50}%; background:var(--green)"></div>
+            <div style="width:${totalAssets>0?(totalStock/totalAssets*100):50}%; background:var(--gold)"></div>
+          </div>
         </div>
 
         <div class="am-card">
@@ -977,7 +989,9 @@
                 <div class="am-row">
                   <div class="am-row-main">
                     <div class="am-row-name">${escapeHtml(st.name)}</div>
-                    <div class="am-row-sub">${latest.shares||0} 股・成本 ${fmtMoney(latest.cost||0)}・損益 <span style="color:${profit>=0?'var(--green)':'var(--rust)'}">${fmtMoney(profit)}(${rate.toFixed(1)}%)</span>${monthlyRate!==null?('・平均每月報酬率 '+monthlyRate.toFixed(2)+'%'):''}</div>
+                    <div class="am-row-sub">${latest.shares||0} 股・成本 ${fmtMoney(latest.cost||0)}</div>
+                    <div class="am-row-sub">損益 <span style="color:${profit>=0?'var(--green)':'var(--rust)'}">${fmtMoney(profit)}(${rate.toFixed(1)}%)</span></div>
+                    ${monthlyRate!==null?`<div class="am-row-sub">平均每月報酬率 ${monthlyRate.toFixed(2)}%</div>`:''}
                     <div class="am-row-sub">最新紀錄日期:${latest.date||'-'} <span class="am-detail-link" data-add-stock-entry="${st.id}">更新紀錄</span></div>
                   </div>
                   <div class="am-row-amt am-num">${fmtMoney(latest.marketValue||0)}</div>
@@ -1001,7 +1015,8 @@
                   <div class="am-checkbox ${paid?'checked':''}" data-toggle-fixed="${f.id}">${paid?'✓':''}</div>
                   <div class="am-row-main">
                     <div class="am-row-name">${escapeHtml(f.name)}</div>
-                    <div class="am-row-sub">${pocket?escapeHtml(pocket.name):'未指派口袋'}${paid?'・本期('+isoDate(cycle.start)+' 起)已扣款':'・本期('+isoDate(cycle.start)+' 起)尚未扣款'}</div>
+                    <div class="am-row-sub">${pocket?escapeHtml(pocket.name):'未指派口袋'}</div>
+                    <div class="am-row-sub">本期(${isoDate(cycle.start)} 起)${paid?'已扣款':'尚未扣款'}</div>
                   </div>
                   <div class="am-row-amt am-num">${fmtMoney(f.amount)}</div>
                   <button class="am-row-del" data-del-fixed="${f.id}" title="刪除">✕</button>
@@ -1044,7 +1059,8 @@
                   <div style="display:flex; align-items:center; gap:10px;">
                     <div class="am-row-main">
                       <div class="am-row-name">${escapeHtml(b.name)}</div>
-                      <div class="am-row-sub">${pocket?escapeHtml(pocket.name):'未指派口袋'}・已花 ${fmtMoney(spent)} / ${fmtMoney(displayAmount)}・${over?('<span class="am-pocket-shortfall">超支 '+fmtMoney(spent-displayAmount)+'</span>'):('<span class="am-pocket-ok">剩餘 '+fmtMoney(displayAmount-spent)+'</span>')}</div>
+                      <div class="am-row-sub">${pocket?escapeHtml(pocket.name):'未指派口袋'}</div>
+                      <div class="am-row-sub">已花 ${fmtMoney(spent)} / ${fmtMoney(displayAmount)}・${over?('<span class="am-pocket-shortfall">超支 '+fmtMoney(spent-displayAmount)+'</span>'):('<span class="am-pocket-ok">剩餘 '+fmtMoney(displayAmount-spent)+'</span>')}</div>
                     </div>
                     <button class="am-row-del" data-del-budget="${b.id}" title="刪除">✕</button>
                   </div>
