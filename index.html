@@ -87,6 +87,7 @@
   .am-net-breakdown{ font-size:12px; color:var(--ink-soft); margin-top:5px; }
   .am-net-breakdown b{ color:var(--ink); font-weight:700; }
   .am-goal-bignum{ font-size:22px; font-weight:800; margin:2px 0; }
+  .am-num-big{ font-size:18px; font-weight:800; }
   .am-privacy-btn{ border:1px solid var(--hairline); background:var(--paper-card); color:var(--ink-soft); font-size:12px; font-weight:700; border-radius:20px; padding:6px 12px; cursor:pointer; }
   .am-row-grid2{ display:grid; grid-template-columns: 1fr 1fr; gap:2px 14px; }
   .am-row-grid3{ display:grid; grid-template-columns: 46px 0.9fr 1.3fr; gap:0 12px; align-items:center; }
@@ -261,8 +262,7 @@
   let quickCatFilter = null;
   let assetSubTab = '收支';
   let shortfallPocketIds = new Set();
-  let expandedPocketIds = new Set();
-  let expandedRowIds = new Set(); // 通用:key 格式為 "budget:xxx"、"fixed:xxx"、"stock:xxx"、"goal:xxx"
+  let editSections = new Set(); // 區塊層級的整批編輯模式:'pocket'、'budget'、'fixed'、'stock'、'goal'
   let toastTimer = null;
 
   function uid(p){ return p+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
@@ -843,6 +843,11 @@
     </svg>`;
   }
 
+  function sectionEditBtn(key, label){
+    const on = editSections.has(key);
+    return `<button class="am-add-btn" data-toggle-section-edit="${key}">${on?'完成編輯':('編輯'+label)}</button>`;
+  }
+
   function ringSvg(pct, size, strokeColor, trackColor){
     const clamped = Math.min(Math.max(pct,0),1);
     const stroke = Math.max(Math.round(size*0.13),5);
@@ -855,7 +860,7 @@
   }
 
   function renderPocketRow(pocket, proj, showInterestBtn){
-    const expanded = expandedPocketIds.has(pocket.id);
+    const editOn = editSections.has('pocket');
     return `
     <div class="am-row">
       <div class="am-row-main">
@@ -865,15 +870,13 @@
       </div>
       <div>
         <div class="am-row-amt am-num">${fmtMoney(proj.balance)}</div>
+        ${editOn ? `
         <div style="text-align:right;margin-top:4px; display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
-          ${expanded ? `
-            ${showInterestBtn ? `<button class="am-adj-btn" data-add-interest="${pocket.id}">入利息</button>` : ''}
-            <button class="am-adj-btn" data-edit-pocket="${pocket.id}">改名</button>
-            <button class="am-adj-btn" data-adjust-pocket="${pocket.id}">微調</button>
-            <button class="am-row-del" data-del-pocket="${pocket.id}" title="刪除">刪除</button>
-            <button class="am-adj-btn" data-collapse-pocket-actions="${pocket.id}">收起</button>
-          ` : `<button class="am-adj-btn" data-toggle-pocket-actions="${pocket.id}">編輯</button>`}
-        </div>
+          ${showInterestBtn ? `<button class="am-adj-btn" data-add-interest="${pocket.id}">入利息</button>` : ''}
+          <button class="am-adj-btn" data-edit-pocket="${pocket.id}">改名</button>
+          <button class="am-adj-btn" data-adjust-pocket="${pocket.id}">微調</button>
+          <button class="am-row-del" data-del-pocket="${pocket.id}" title="刪除">刪除</button>
+        </div>` : ''}
       </div>
     </div>`;
   }
@@ -978,7 +981,7 @@
           <div class="am-section-title">存錢目標清單 <button class="am-add-btn" id="am-add-savingsgoal">＋ 新增目標</button></div>
           <div class="am-empty">還沒有存錢目標,點右上角新增</div>
         </div>` : `
-        <div class="am-manage-link" style="text-align:right; text-decoration:none;"><button class="am-add-btn" id="am-add-savingsgoal">＋ 新增存錢目標</button></div>
+        <div class="am-manage-link" style="text-align:right; text-decoration:none; display:flex; justify-content:flex-end; gap:10px;"><button class="am-add-btn" id="am-add-savingsgoal">＋ 新增存錢目標</button>${sectionEditBtn('goal','目標')}</div>
         ${state.savingsGoals.map(g=>{
           const current = savingsGoalCurrent(g);
           const accountKey = savingsGoalAccountKey(g);
@@ -987,7 +990,6 @@
           const totalTarget = g.totalTarget||0;
           const remaining = Math.max(totalTarget - current, 0);
           const monthsNeeded = actualMonthly>0 ? Math.ceil(remaining/actualMonthly) : null;
-          const gExpanded = expandedRowIds.has('goal:'+g.id);
           const ratio = totalTarget>0 ? Math.min(current/totalTarget,1) : 0;
           const pctDisplay = totalTarget>0 ? Math.round(current/totalTarget*100) : 0;
           let etaText = '還沒有足夠的完整發薪週期資料可以估計';
@@ -1013,11 +1015,8 @@
                 <div class="am-row-sub">目標 ${fmtMoney(totalTarget)}</div>
               </div>
               <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
-                ${gExpanded ? `
-                  <button class="am-adj-btn" data-edit-savingsgoal="${g.id}">編輯</button>
-                  <button class="am-row-del" data-del-savingsgoal="${g.id}" title="刪除">刪除</button>
-                  <button class="am-adj-btn" data-collapse-row="goal:${g.id}">收起</button>
-                ` : `<button class="am-adj-btn" data-expand-row="goal:${g.id}">編輯</button>`}
+                <button class="am-adj-btn" data-edit-savingsgoal="${g.id}">編輯</button>
+                ${editSections.has('goal') ? `<button class="am-row-del" data-del-savingsgoal="${g.id}" title="刪除">刪除</button>` : ''}
               </div>
             </div>
             <div style="margin-top:12px; padding-top:12px; border-top:1px dashed var(--hairline); display:flex; justify-content:space-between; gap:10px;">
@@ -1068,7 +1067,7 @@
         </div>
 
         <div class="am-card">
-          <div class="am-section-title">現金口袋 <span style="display:flex; gap:10px;"><button class="am-add-btn" id="am-pocket-transfer">轉帳</button><button class="am-add-btn" id="am-add-pocket">＋ 新增口袋</button></span></div>
+          <div class="am-section-title">現金口袋 <span style="display:flex; gap:10px;"><button class="am-add-btn" id="am-pocket-transfer">轉帳</button><button class="am-add-btn" id="am-add-pocket">＋ 新增口袋</button>${sectionEditBtn('pocket','口袋')}</span></div>
           <div class="am-hint" style="margin-top:0;">合計 <b class="am-num" style="color:var(--ink);">${fmtMoney(currentCashOnly)}</b></div>
           <div class="am-list">
             ${(()=>{
@@ -1092,7 +1091,7 @@
         </div>
 
         <div class="am-card">
-          <div class="am-section-title">股票 <button class="am-add-btn" id="am-add-stock">＋ 新增持股</button></div>
+          <div class="am-section-title">股票 <span style="display:flex; gap:10px;"><button class="am-add-btn" id="am-add-stock">＋ 新增持股</button>${sectionEditBtn('stock','股票')}</span></div>
           <div class="am-hint" style="margin-top:0;">合計 <b class="am-num" style="color:var(--ink);">${fmtMoney(totalStock)}</b></div>
           <div class="am-list">
             ${state.stocks.length===0 ? '<div class="am-empty">還沒有持股紀錄</div>' :
@@ -1102,7 +1101,6 @@
                 const rate = latest.cost>0 ? (profit/latest.cost*100) : 0;
                 const monthlyRate = stockMonthlyReturnRate(st);
                 const totalDividend = (st.dividends||[]).reduce((s,d)=>s+d.amount,0);
-                const stExpanded = expandedRowIds.has('stock:'+st.id);
                 return `
                 <div class="am-row" style="flex-direction:column; align-items:stretch;">
                   <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
@@ -1117,13 +1115,10 @@
                     <div class="am-row-sub">股利累計 <span style="color:var(--green)">${fmtMoney(totalDividend)}</span></div>
                     <div class="am-row-sub">最新 ${latest.date||'-'}</div>
                   </div>
-                  <div style="margin-top:6px; display:flex; gap:12px; justify-content:flex-end; flex-wrap:wrap;">
-                    ${stExpanded ? `
-                      <span class="am-detail-link" data-add-stock-entry="${st.id}">更新市值</span>
-                      <span class="am-detail-link" data-add-dividend="${st.id}">+ 記一筆股利</span>
-                      <button class="am-row-del" data-del-stock="${st.id}" title="刪除">刪除</button>
-                      <button class="am-adj-btn" data-collapse-row="stock:${st.id}">收起</button>
-                    ` : `<button class="am-adj-btn" data-expand-row="stock:${st.id}">編輯</button>`}
+                  <div style="margin-top:6px; display:flex; gap:12px; justify-content:flex-end; flex-wrap:wrap; align-items:center;">
+                    <span class="am-detail-link" data-add-stock-entry="${st.id}">更新市值</span>
+                    <span class="am-detail-link" data-add-dividend="${st.id}">+ 記一筆股利</span>
+                    ${editSections.has('stock') ? `<button class="am-row-del" data-del-stock="${st.id}" title="刪除">刪除</button>` : ''}
                   </div>
                 </div>`;
               }).join('')}
@@ -1133,13 +1128,12 @@
 
         ${assetSubTab==='預算' ? `
         <div class="am-card">
-          <div class="am-section-title">固定支出(預扣帳戶) <button class="am-add-btn" id="am-add-fixed">＋ 新增固定支出</button></div>
+          <div class="am-section-title">固定支出(預扣帳戶) <span style="display:flex; gap:10px;"><button class="am-add-btn" id="am-add-fixed">＋ 新增固定支出</button>${sectionEditBtn('fixed','固定支出')}</span></div>
           <div class="am-list">
             ${state.fixedExpenses.length===0 ? '<div class="am-empty">還沒有固定支出項目</div>' :
               state.fixedExpenses.map(f=>{
                 const pocket = state.pockets.find(p=>p.id===f.pocketId);
                 const paid = !!(f.paidCycles && f.paidCycles[cycle.key]);
-                const fExpanded = expandedRowIds.has('fixed:'+f.id);
                 return `
                 <div class="am-row">
                   <div class="am-checkbox ${paid?'checked':''}" data-toggle-fixed="${f.id}">${paid?'✓':''}</div>
@@ -1150,9 +1144,7 @@
                   </div>
                   <div style="text-align:right;">
                     <div class="am-row-amt am-num">${fmtMoney(f.amount)}</div>
-                    <div style="margin-top:4px; display:flex; gap:6px; justify-content:flex-end;">
-                      ${fExpanded ? `<button class="am-row-del" data-del-fixed="${f.id}" title="刪除">刪除</button><button class="am-adj-btn" data-collapse-row="fixed:${f.id}">收起</button>` : `<button class="am-adj-btn" data-expand-row="fixed:${f.id}">編輯</button>`}
-                    </div>
+                    ${editSections.has('fixed') ? `<div style="margin-top:4px;"><button class="am-row-del" data-del-fixed="${f.id}" title="刪除">刪除</button></div>` : ''}
                   </div>
                 </div>`;
               }).join('')}
@@ -1160,7 +1152,7 @@
         </div>
 
         <div class="am-card">
-          <div class="am-section-title">預算 <button class="am-add-btn" id="am-add-budget">＋ 新增預算</button></div>
+          <div class="am-section-title">預算 <span style="display:flex; gap:10px;"><button class="am-add-btn" id="am-add-budget">＋ 新增預算</button>${sectionEditBtn('budget','預算')}</span></div>
           <div class="am-budget-view-bar">
             <div class="am-budget-mode-toggle">
               <button class="am-view-toggle ${budgetView.mode==='month'?'sel':''}" data-budget-mode="month">月</button>
@@ -1189,7 +1181,6 @@
                 const pct = displayAmount>0 ? Math.min(spent/displayAmount,1) : 0;
                 const pctDisplay = displayAmount>0 ? Math.round(spent/displayAmount*100) : 0;
                 const over = spent>displayAmount;
-                const bExpanded = expandedRowIds.has('budget:'+b.id);
                 return `
                 <div style="padding:11px 0; border-bottom:1px solid var(--hairline);">
                   <div style="display:grid; grid-template-columns:46px 1fr; gap:12px; align-items:center;">
@@ -1201,10 +1192,13 @@
                       <div class="am-row-sub">${pocket?escapeHtml(pocket.name):'未指派口袋'}</div>
                     </div>
                   </div>
-                  <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:6px; padding-left:58px;">
-                    <div class="am-row-sub">已花 ${fmtMoney(spent)} / ${fmtMoney(displayAmount)}・${over?('<span class="am-pocket-shortfall">超支 '+fmtMoney(spent-displayAmount)+'</span>'):('<span class="am-pocket-ok">剩餘 '+fmtMoney(displayAmount-spent)+'</span>')}</div>
-                    ${bExpanded ? `<button class="am-row-del" data-del-budget="${b.id}" title="刪除">刪除</button><button class="am-adj-btn" data-collapse-row="budget:${b.id}">收起</button>` : `<button class="am-adj-btn" data-expand-row="budget:${b.id}">編輯</button>`}
+                  <div style="padding-left:58px; margin-top:6px;">
+                    <div class="am-row-sub">已花</div>
+                    <div class="am-num-big am-num">${fmtMoney(spent)} <span style="font-size:var(--font-sm); font-weight:600; color:var(--ink-soft);">/ ${fmtMoney(displayAmount)}</span></div>
+                    <div class="am-row-sub" style="margin-top:4px;">${over?'超支':'剩餘'}</div>
+                    <div class="am-num-big am-num" style="color:${over?'var(--rust)':'var(--green)'}">${fmtMoney(over?(spent-displayAmount):(displayAmount-spent))}</div>
                   </div>
+                  ${editSections.has('budget') ? `<div style="padding-left:58px; margin-top:8px;"><button class="am-row-del" data-del-budget="${b.id}" title="刪除">刪除</button></div>` : ''}
                 </div>`;
               }); })().join('')}
           </div>
@@ -1596,17 +1590,12 @@
 
     const addPocketBtn = $('#am-add-pocket'); if(addPocketBtn) addPocketBtn.onclick = ()=> openModal({type:'addPocket'});
     const transferBtn = $('#am-pocket-transfer'); if(transferBtn) transferBtn.onclick = ()=> openModal({type:'pocketTransfer', fromId:state.pockets[0]&&state.pockets[0].id, toId:state.pockets[1]&&state.pockets[1].id});
-    root.querySelectorAll('[data-toggle-pocket-actions]').forEach(b=>{
-      b.onclick = ()=>{ expandedPocketIds.add(b.dataset.togglePocketActions); render(); };
-    });
-    root.querySelectorAll('[data-collapse-pocket-actions]').forEach(b=>{
-      b.onclick = ()=>{ expandedPocketIds.delete(b.dataset.collapsePocketActions); render(); };
-    });
-    root.querySelectorAll('[data-expand-row]').forEach(b=>{
-      b.onclick = ()=>{ expandedRowIds.add(b.dataset.expandRow); render(); };
-    });
-    root.querySelectorAll('[data-collapse-row]').forEach(b=>{
-      b.onclick = ()=>{ expandedRowIds.delete(b.dataset.collapseRow); render(); };
+    root.querySelectorAll('[data-toggle-section-edit]').forEach(b=>{
+      b.onclick = ()=>{
+        const key = b.dataset.toggleSectionEdit;
+        if(editSections.has(key)) editSections.delete(key); else editSections.add(key);
+        render();
+      };
     });
     root.querySelectorAll('[data-edit-pocket]').forEach(b=> b.onclick = ()=> openModal({type:'editPocket', pocketId:b.dataset.editPocket}));
     root.querySelectorAll('[data-pocket-detail]').forEach(b=> b.onclick = ()=> openModal({type:'pocketDetail', pocketId:b.dataset.pocketDetail}));
