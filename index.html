@@ -77,6 +77,7 @@
   .am-net-goal-text{ font-size:12.5px; color:var(--ink-soft); margin-top:6px; }
   .am-net-breakdown{ font-size:12px; color:var(--ink-soft); margin-top:5px; }
   .am-net-breakdown b{ color:var(--ink); font-weight:700; }
+  .am-goal-bignum{ font-size:22px; font-weight:800; margin:2px 0; }
   .am-split-bar{ height:8px; border-radius:6px; overflow:hidden; display:flex; margin-top:10px; background:var(--hairline); }
   .am-net-goal-text b{ color:var(--gold); font-weight:700; }
   .am-ring-wrap{ position:relative; width:92px; height:92px; flex-shrink:0; cursor:pointer; }
@@ -593,8 +594,10 @@
     return (Math.pow(growth, 1/months) - 1) * 100;
   }
   const STOCK_INVEST_ACCOUNT = '群益 6000';
+  const RATE_WINDOW_CYCLES = 6;
   function avgMonthlyAccountFlow(account){
-    const cycles = completedCycles();
+    const allCycles = completedCycles();
+    const cycles = allCycles.slice(-RATE_WINDOW_CYCLES);
     if(cycles.length===0) return {rate:0, months:0};
     let total = 0;
     cycles.forEach(cy=>{
@@ -878,42 +881,57 @@
           </div>`;
         })()}
 
+        ${(!state.savingsGoals || state.savingsGoals.length===0) ? `
         <div class="am-card">
           <div class="am-section-title">存錢目標清單 <button class="am-add-btn" id="am-add-savingsgoal">＋ 新增目標</button></div>
-          <div class="am-list">
-            ${(!state.savingsGoals || state.savingsGoals.length===0) ? '<div class="am-empty">還沒有存錢目標,點右上角新增</div>' :
-              state.savingsGoals.map(g=>{
-                const current = savingsGoalCurrent(g);
-                const accountKey = savingsGoalAccountKey(g);
-                const {rate:actualMonthly, months} = accountKey ? avgMonthlyAccountFlow(accountKey) : {rate:0, months:0};
-                const monthlyTarget = g.monthlyTarget||0;
-                const totalTarget = g.totalTarget||0;
-                const remaining = Math.max(totalTarget - current, 0);
-                const monthsNeeded = actualMonthly>0 ? Math.ceil(remaining/actualMonthly) : null;
-                const pct = totalTarget>0 ? Math.min(current/totalTarget*100,100) : 0;
-                let etaText = '尚無足夠完整發薪週期資料可以估計';
-                if(months>0){
-                  etaText = monthsNeeded!==null ? ('以目前速度約 '+monthsNeeded+' 個月後達成') : '目前平均是負的或零,暫時無法估計時間';
-                }
-                return `
-                <div class="am-row" style="flex-direction:column; align-items:stretch;">
-                  <div style="display:flex; align-items:center; gap:10px;">
-                    <div class="am-row-main">
-                      <div class="am-row-name">${escapeHtml(g.name)}</div>
-                      <div class="am-row-sub">帳戶:${escapeHtml(savingsGoalLabel(g))}</div>
-                      <div class="am-row-sub">目前 ${fmtMoney(current)} / 目標 ${fmtMoney(totalTarget)}</div>
-                      <div class="am-row-sub">每月存入目標 ${fmtMoney(monthlyTarget)}</div>
-                      ${months>0?`<div class="am-row-sub">實際平均每期 ${fmtMoney(actualMonthly)}(過去 ${months} 期)</div>`:''}
-                      <div class="am-row-sub">${etaText}</div>
-                    </div>
-                    <button class="am-adj-btn" data-edit-savingsgoal="${g.id}">編輯</button>
-                    <button class="am-row-del" data-del-savingsgoal="${g.id}" title="刪除">✕</button>
-                  </div>
-                  <div class="am-progress-bar"><div class="am-progress-fill" style="width:${pct}%; background:var(--gold)"></div></div>
-                </div>`;
-              }).join('')}
-          </div>
-        </div>
+          <div class="am-empty">還沒有存錢目標,點右上角新增</div>
+        </div>` : `
+        <div class="am-manage-link" style="text-align:right; text-decoration:none;"><button class="am-add-btn" id="am-add-savingsgoal">＋ 新增存錢目標</button></div>
+        ${state.savingsGoals.map(g=>{
+          const current = savingsGoalCurrent(g);
+          const accountKey = savingsGoalAccountKey(g);
+          const {rate:actualMonthly, months} = accountKey ? avgMonthlyAccountFlow(accountKey) : {rate:0, months:0};
+          const monthlyTarget = g.monthlyTarget||0;
+          const totalTarget = g.totalTarget||0;
+          const remaining = Math.max(totalTarget - current, 0);
+          const monthsNeeded = actualMonthly>0 ? Math.ceil(remaining/actualMonthly) : null;
+          const ratio = totalTarget>0 ? Math.min(current/totalTarget,1) : 0;
+          const pctDisplay = totalTarget>0 ? Math.round(current/totalTarget*100) : 0;
+          let etaText = '還沒有足夠的完整發薪週期資料可以估計';
+          if(months>0){
+            etaText = monthsNeeded!==null ? ('以最近 '+months+' 期的速度,約 '+monthsNeeded+' 個月後達成') : '最近平均是負的或零,暫時無法估計時間';
+          }
+          const gSize=76, gStroke=8, gR=(gSize-gStroke)/2, gC=2*Math.PI*gR;
+          const miniRing = `<svg width="${gSize}" height="${gSize}" viewBox="0 0 ${gSize} ${gSize}">
+            <circle cx="${gSize/2}" cy="${gSize/2}" r="${gR}" fill="none" stroke="var(--gold-soft)" stroke-width="${gStroke}"/>
+            <circle cx="${gSize/2}" cy="${gSize/2}" r="${gR}" fill="none" stroke="var(--gold)" stroke-width="${gStroke}" stroke-linecap="round"
+              stroke-dasharray="${gC}" stroke-dashoffset="${gC*(1-ratio)}" transform="rotate(-90 ${gSize/2} ${gSize/2})"/>
+          </svg>`;
+          return `
+          <div class="am-card">
+            <div style="display:flex; align-items:center; gap:14px;">
+              <div class="am-ring-wrap" style="width:${gSize}px; height:${gSize}px; flex-shrink:0;">${miniRing}
+                <div class="am-ring-pct"><div class="p am-num" style="font-size:16px;">${pctDisplay}%</div></div>
+              </div>
+              <div style="flex:1; min-width:0;">
+                <div class="am-row-name" style="font-size:15.5px;">${escapeHtml(g.name)}</div>
+                <div class="am-row-sub">${escapeHtml(savingsGoalLabel(g))}</div>
+                <div class="am-goal-bignum am-num">${fmtMoney(current)}</div>
+                <div class="am-row-sub">目標 ${fmtMoney(totalTarget)}</div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+                <button class="am-adj-btn" data-edit-savingsgoal="${g.id}">編輯</button>
+                <button class="am-row-del" data-del-savingsgoal="${g.id}" title="刪除">✕</button>
+              </div>
+            </div>
+            <div style="margin-top:12px; padding-top:12px; border-top:1px dashed var(--hairline); display:flex; justify-content:space-between; gap:10px;">
+              <div class="am-row-sub">每月目標 <b class="am-num" style="color:var(--ink);">${fmtMoney(monthlyTarget)}</b></div>
+              ${months>0 ? `<div class="am-row-sub">近期實際 <b class="am-num" style="color:${actualMonthly>=monthlyTarget?'var(--green)':'var(--rust)'};">${fmtMoney(actualMonthly)}</b></div>` : ''}
+            </div>
+            <div class="am-row-sub" style="margin-top:6px;">${etaText}</div>
+          </div>`;
+        }).join('')}
+        `}
         ` : ''}
 
         ${assetSubTab==='收支' ? `
