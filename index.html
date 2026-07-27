@@ -30,6 +30,11 @@
     --blue-soft:#DCEEF9;
     --radius:16px;
     --shadow: 0 1px 2px rgba(12,56,102,0.06), 0 6px 20px rgba(12,56,102,0.08);
+    --font-xl:24px;
+    --font-lg:19px;
+    --font-md:15.5px;
+    --font-body:13px;
+    --font-sm:11.5px;
   }
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; background:var(--paper); }
@@ -47,7 +52,7 @@
     border-bottom:1px solid var(--hairline); padding:14px 18px 12px;
   }
   .am-header-top{ display:flex; align-items:center; justify-content:space-between; }
-  .am-title{ font-family:'Manrope', sans-serif; font-weight:800; font-size:19px; }
+  .am-title{ font-family:'Manrope', sans-serif; font-weight:800; font-size:var(--font-lg); }
   .am-payday-chip{ display:flex; align-items:center; gap:5px; font-size:12px; color:var(--ink-soft); cursor:pointer; }
   .am-payday-chip b{ color:var(--ink); font-weight:700; }
   .am-cycle-text{ font-size:11.5px; color:var(--ink-soft); margin-top:3px; }
@@ -61,7 +66,7 @@
     border:1px solid var(--hairline); padding:18px; margin-bottom:16px;
   }
   .am-section-title{
-    font-size:13px; font-weight:700; color:var(--ink-soft); letter-spacing:0.06em; text-transform:uppercase;
+    font-size:var(--font-body); font-weight:700; color:var(--ink-soft); letter-spacing:0.06em; text-transform:uppercase;
     margin:0 0 10px 2px; display:flex; align-items:center; justify-content:space-between;
   }
   .am-add-btn{ border:none; background:none; color:var(--green); font-weight:600; font-size:13px; cursor:pointer; padding:4px 2px; }
@@ -77,7 +82,7 @@
   .am-net-card{ display:flex; align-items:center; gap:18px; }
   .am-net-info{ flex:1; }
   .am-net-eyebrow{ font-size:12px; color:var(--ink-soft); font-weight:600; margin-bottom:4px; }
-  .am-net-value{ font-size:28px; font-weight:800; line-height:1.1; }
+  .am-net-value{ font-size:var(--font-xl); font-weight:800; line-height:1.1; }
   .am-net-goal-text{ font-size:12.5px; color:var(--ink-soft); margin-top:6px; }
   .am-net-breakdown{ font-size:12px; color:var(--ink-soft); margin-top:5px; }
   .am-net-breakdown b{ color:var(--ink); font-weight:700; }
@@ -102,10 +107,10 @@
   .am-row{ display:flex; align-items:center; gap:10px; padding:11px 0; border-bottom:1px solid var(--hairline); }
   .am-row:last-child{ border-bottom:none; }
   .am-row-main{ flex:1; min-width:0; }
-  .am-row-name{ font-size:14.5px; font-weight:600; }
-  .am-row-sub{ font-size:11.5px; color:var(--ink-soft); margin-top:1px; }
+  .am-row-name{ font-size:var(--font-md); font-weight:600; }
+  .am-row-sub{ font-size:var(--font-sm); color:var(--ink-soft); margin-top:1px; }
   .am-row-amt{ font-family:'Manrope',sans-serif; font-size:15px; font-weight:700; white-space:nowrap; text-align:right; }
-  .am-row-del{ border:none; background:none; color:#b7ac8f; cursor:pointer; font-size:16px; padding:2px 4px; }
+  .am-row-del{ border:1px solid var(--rust-soft); background:#fff; color:var(--rust); cursor:pointer; font-size:11.5px; font-weight:700; padding:5px 10px; border-radius:8px; }
   .am-empty{ font-size:13px; color:var(--ink-soft); padding:14px 2px; text-align:center; }
   .am-pocket-shortfall{ color:var(--rust); }
   .am-pocket-ok{ color:var(--green); }
@@ -158,7 +163,7 @@
 
   .am-overlay{ position:fixed; inset:0; background:rgba(12,56,102,0.35); z-index:50; display:flex; align-items:center; justify-content:center; padding:20px; }
   .am-sheet{ background:var(--paper-card); width:100%; max-width:440px; border-radius:20px; padding:22px 20px; max-height:82vh; overflow-y:auto; box-shadow: 0 10px 40px rgba(0,0,0,0.25); }
-  .am-sheet-title{ font-family:'Manrope',sans-serif; font-size:18px; font-weight:700; margin-bottom:16px; }
+  .am-sheet-title{ font-family:'Manrope',sans-serif; font-size:var(--font-md); font-weight:700; margin-bottom:16px; }
   .am-field{ margin-bottom:14px; }
   .am-field-row{ display:flex; gap:10px; margin-bottom:14px; }
   .am-field-row .am-field{ flex:1; margin-bottom:0; }
@@ -728,20 +733,27 @@
 
     let bodyHtml;
     if(txView.group==='detail'){
+      const warnedAccounts = new Set();
       bodyHtml = rows.length===0 ? '<div class="am-empty">這段期間沒有紀錄</div>' : rows.map(l=>{
         const pk = state.pockets.find(p=>p.account===l.account);
         const accountLabel = pk ? pk.name : l.account;
-        const isShort = pk && shortfallPocketIds.has(pk.id);
+        let isShort = false;
+        if(pk && shortfallPocketIds.has(pk.id) && !warnedAccounts.has(pk.id)){
+          isShort = true;
+          warnedAccounts.add(pk.id);
+        }
         return `
-        <div class="am-row" style="display:grid; grid-template-columns:1.3fr 1fr; gap:10px; align-items:start;">
+        <div class="am-row" style="display:grid; grid-template-columns:1.5fr 0.9fr 0.6fr; gap:8px; align-items:start;">
           <div>
-            <div class="am-row-name">${escapeHtml(l.cat1)}${l.cat2?('・'+escapeHtml(l.cat2)):''}</div>
-            ${l.note ? `<div class="am-row-sub">${escapeHtml(l.note)}</div>` : ''}
+            <div class="am-row-name">${escapeHtml(l.cat1)}${l.cat2?('・'+escapeHtml(l.cat2)):''}${l.note?(' ('+escapeHtml(l.note)+')'):''}</div>
             <div class="am-row-sub">${l.datetime.slice(0,10)} ${l.datetime.slice(11,16)}</div>
           </div>
           <div style="text-align:right;">
-            <div class="am-row-amt ${l.type==='收入'?'inc':'exp'} am-num">${isShort?'⚠️ ':''}${escapeHtml(accountLabel)} ${l.type==='收入'?'+':'-'}${fmtRaw(l.amount)}</div>
-            <button class="am-adj-btn" data-edit-tx="${l.id}" style="margin-top:4px;">編輯</button>
+            <div class="am-row-amt ${l.type==='收入'?'inc':'exp'} am-num">${isShort?'⚠️ ':''}${escapeHtml(accountLabel)}</div>
+            <div class="am-row-amt ${l.type==='收入'?'inc':'exp'} am-num">${l.type==='收入'?'+':'-'}${fmtRaw(l.amount)}</div>
+          </div>
+          <div style="text-align:right;">
+            <button class="am-adj-btn" data-edit-tx="${l.id}">編輯</button>
           </div>
         </div>`;
       }).join('');
@@ -838,7 +850,8 @@
             ${showInterestBtn ? `<button class="am-adj-btn" data-add-interest="${pocket.id}">入利息</button>` : ''}
             <button class="am-adj-btn" data-edit-pocket="${pocket.id}">改名</button>
             <button class="am-adj-btn" data-adjust-pocket="${pocket.id}">微調</button>
-            <button class="am-row-del" data-del-pocket="${pocket.id}" title="刪除">✕</button>
+            <button class="am-row-del" data-del-pocket="${pocket.id}" title="刪除">刪除</button>
+            <button class="am-adj-btn" data-collapse-pocket-actions="${pocket.id}">收起</button>
           ` : `<button class="am-adj-btn" data-toggle-pocket-actions="${pocket.id}">編輯</button>`}
         </div>
       </div>
@@ -889,7 +902,10 @@
     let html = `
       <div class="am-header">
         <div class="am-header-top">
-          <div class="am-title">資產管理</div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="am-title">資產管理</div>
+            <button class="am-privacy-btn" id="am-toggle-privacy">${privacyMode?'👁️ 顯示':'🙈 隱藏'}</button>
+          </div>
           <div class="am-payday-chip" id="am-open-payday">薪水日 <b>${dayForYM(thisYM)}</b> 號 ▾</div>
         </div>
         <div class="am-cycle-text">本次發薪週期:${isoDate(cycle.start)} ~ ${isoDate(new Date(cycle.end-86400000))}(還有 ${cycleDaysLeft} 天)</div>
@@ -977,7 +993,7 @@
               </div>
               <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
                 <button class="am-adj-btn" data-edit-savingsgoal="${g.id}">編輯</button>
-                <button class="am-row-del" data-del-savingsgoal="${g.id}" title="刪除">✕</button>
+                <button class="am-row-del" data-del-savingsgoal="${g.id}" title="刪除">刪除</button>
               </div>
             </div>
             <div style="margin-top:12px; padding-top:12px; border-top:1px dashed var(--hairline); display:flex; justify-content:space-between; gap:10px;">
@@ -1016,10 +1032,7 @@
 
         ${assetSubTab==='資產' ? `
         <div class="am-card">
-          <div style="display:flex; align-items:center; justify-content:space-between;">
-            <div class="am-net-eyebrow">總資產淨值(現金口袋+股票)</div>
-            <button class="am-privacy-btn" id="am-toggle-privacy">${privacyMode?'👁️ 顯示':'🙈 隱藏'}</button>
-          </div>
+          <div class="am-net-eyebrow">總資產淨值(現金口袋+股票)</div>
           <div style="display:flex; align-items:center; gap:14px; margin-top:6px;">
             <div class="am-ring-wrap" style="width:76px; height:76px; flex-shrink:0;">${donutSvg([{value:totalCash,color:'var(--green)'},{value:totalStock,color:'var(--gold)'}],76,'var(--hairline)')}</div>
             <div style="flex:1; min-width:0;">
@@ -1083,7 +1096,7 @@
                     </div>
                   </div>
                   <div class="am-row-amt am-num">${fmtMoney(latest.marketValue||0)}</div>
-                  <button class="am-row-del" data-del-stock="${st.id}" title="刪除">✕</button>
+                  <button class="am-row-del" data-del-stock="${st.id}" title="刪除">刪除</button>
                 </div>`;
               }).join('')}
           </div>
@@ -1107,7 +1120,7 @@
                     <div class="am-row-sub">本期(${isoDate(cycle.start)} 起)${paid?'已扣款':'尚未扣款'}</div>
                   </div>
                   <div class="am-row-amt am-num">${fmtMoney(f.amount)}</div>
-                  <button class="am-row-del" data-del-fixed="${f.id}" title="刪除">✕</button>
+                  <button class="am-row-del" data-del-fixed="${f.id}" title="刪除">刪除</button>
                 </div>`;
               }).join('')}
           </div>
@@ -1144,18 +1157,19 @@
                 const pctDisplay = displayAmount>0 ? Math.round(spent/displayAmount*100) : 0;
                 const over = spent>displayAmount;
                 return `
-                <div class="am-row-grid3" style="padding:11px 0; border-bottom:1px solid var(--hairline);">
-                  <div class="am-mini-ring">${ringSvg(pct,44,over?'var(--rust)':'var(--green)','var(--hairline)')}
-                    <div class="am-mini-ring-pct">${pctDisplay}%</div>
+                <div style="padding:11px 0; border-bottom:1px solid var(--hairline);">
+                  <div style="display:grid; grid-template-columns:46px 1fr; gap:12px; align-items:center;">
+                    <div class="am-mini-ring">${ringSvg(pct,44,over?'var(--rust)':'var(--green)','var(--hairline)')}
+                      <div class="am-mini-ring-pct">${pctDisplay}%</div>
+                    </div>
+                    <div>
+                      <div class="am-row-name">${escapeHtml(b.name)}</div>
+                      <div class="am-row-sub">${pocket?escapeHtml(pocket.name):'未指派口袋'}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div class="am-row-name">${escapeHtml(b.name)}</div>
-                    <div class="am-row-sub">${pocket?escapeHtml(pocket.name):'未指派口袋'}</div>
-                  </div>
-                  <div style="text-align:right;">
-                    <div class="am-row-sub">已花 ${fmtMoney(spent)} / ${fmtMoney(displayAmount)}</div>
-                    <div class="am-row-sub">${over?('<span class="am-pocket-shortfall">超支 '+fmtMoney(spent-displayAmount)+'</span>'):('<span class="am-pocket-ok">剩餘 '+fmtMoney(displayAmount-spent)+'</span>')}</div>
-                    <button class="am-row-del" data-del-budget="${b.id}" title="刪除" style="margin-top:2px;">✕</button>
+                  <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:6px; padding-left:58px;">
+                    <div class="am-row-sub">已花 ${fmtMoney(spent)} / ${fmtMoney(displayAmount)}・${over?('<span class="am-pocket-shortfall">超支 '+fmtMoney(spent-displayAmount)+'</span>'):('<span class="am-pocket-ok">剩餘 '+fmtMoney(displayAmount-spent)+'</span>')}</div>
+                    <button class="am-row-del" data-del-budget="${b.id}" title="刪除">刪除</button>
                   </div>
                 </div>`;
               }); })().join('')}
@@ -1241,13 +1255,13 @@
         ${state.quickItems.expense.map(qi=>`
           <div class="am-quick-manage-row">
             <div style="flex:1;font-size:14px;">${escapeHtml(qi.cat1)}・${escapeHtml(qi.cat2)}</div>
-            <button class="am-row-del" data-del-quick="${qi.id}">✕</button>
+            <button class="am-row-del" data-del-quick="${qi.id}">刪除</button>
           </div>`).join('') || '<div class="am-empty">尚無支出快速項目</div>'}
         <div style="font-size:12px;font-weight:700;color:var(--ink-soft);margin:14px 0 6px;">收入項目</div>
         ${state.quickItems.income.map(qi=>`
           <div class="am-quick-manage-row">
             <div style="flex:1;font-size:14px;">${escapeHtml(qi.cat1)}・${escapeHtml(qi.cat2)}</div>
-            <button class="am-row-del" data-del-quick="${qi.id}">✕</button>
+            <button class="am-row-del" data-del-quick="${qi.id}">刪除</button>
           </div>`).join('') || '<div class="am-empty">尚無收入快速項目</div>'}
         <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--hairline);">
           <div class="am-sheet-title" style="font-size:15px;">新增項目</div>
@@ -1550,6 +1564,9 @@
     const transferBtn = $('#am-pocket-transfer'); if(transferBtn) transferBtn.onclick = ()=> openModal({type:'pocketTransfer', fromId:state.pockets[0]&&state.pockets[0].id, toId:state.pockets[1]&&state.pockets[1].id});
     root.querySelectorAll('[data-toggle-pocket-actions]').forEach(b=>{
       b.onclick = ()=>{ expandedPocketIds.add(b.dataset.togglePocketActions); render(); };
+    });
+    root.querySelectorAll('[data-collapse-pocket-actions]').forEach(b=>{
+      b.onclick = ()=>{ expandedPocketIds.delete(b.dataset.collapsePocketActions); render(); };
     });
     root.querySelectorAll('[data-edit-pocket]').forEach(b=> b.onclick = ()=> openModal({type:'editPocket', pocketId:b.dataset.editPocket}));
     root.querySelectorAll('[data-pocket-detail]').forEach(b=> b.onclick = ()=> openModal({type:'pocketDetail', pocketId:b.dataset.pocketDetail}));
