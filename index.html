@@ -84,7 +84,7 @@
   .am-goal-bignum{ font-size:22px; font-weight:800; margin:2px 0; }
   .am-privacy-btn{ border:1px solid var(--hairline); background:var(--paper-card); color:var(--ink-soft); font-size:12px; font-weight:700; border-radius:20px; padding:6px 12px; cursor:pointer; }
   .am-row-grid2{ display:grid; grid-template-columns: 1fr 1fr; gap:2px 14px; }
-  .am-row-grid3{ display:grid; grid-template-columns: 46px 1fr 1fr; gap:0 12px; align-items:center; }
+  .am-row-grid3{ display:grid; grid-template-columns: 46px 0.9fr 1.3fr; gap:0 12px; align-items:center; }
   .am-mini-ring{ position:relative; width:44px; height:44px; flex-shrink:0; }
   .am-mini-ring-pct{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:800; font-family:'Manrope',sans-serif; color:var(--ink); }
   .am-split-bar{ height:8px; border-radius:6px; overflow:hidden; display:flex; margin-top:10px; background:var(--hairline); }
@@ -255,6 +255,8 @@
   let txView = { mode:'month', period:null, group:'detail', categoryFilter:null };
   let quickCatFilter = null;
   let assetSubTab = '收支';
+  let shortfallPocketIds = new Set();
+  let expandedPocketIds = new Set();
   let toastTimer = null;
 
   function uid(p){ return p+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
@@ -729,16 +731,16 @@
       bodyHtml = rows.length===0 ? '<div class="am-empty">這段期間沒有紀錄</div>' : rows.map(l=>{
         const pk = state.pockets.find(p=>p.account===l.account);
         const accountLabel = pk ? pk.name : l.account;
+        const isShort = pk && shortfallPocketIds.has(pk.id);
         return `
-        <div class="am-row" style="display:grid; grid-template-columns:1.3fr 0.8fr 1.1fr; gap:8px; align-items:center;">
+        <div class="am-row" style="display:grid; grid-template-columns:1.3fr 1fr; gap:10px; align-items:start;">
           <div>
             <div class="am-row-name">${escapeHtml(l.cat1)}${l.cat2?('・'+escapeHtml(l.cat2)):''}</div>
+            ${l.note ? `<div class="am-row-sub">${escapeHtml(l.note)}</div>` : ''}
             <div class="am-row-sub">${l.datetime.slice(0,10)} ${l.datetime.slice(11,16)}</div>
-            <div class="am-row-sub">${escapeHtml(accountLabel)}</div>
           </div>
-          <div class="am-row-amt ${l.type==='收入'?'inc':'exp'} am-num">${l.type==='收入'?'+':'-'}${fmtRaw(l.amount)}</div>
           <div style="text-align:right;">
-            <div class="am-row-sub" style="word-break:break-word;">${l.note?escapeHtml(l.note):'—'}</div>
+            <div class="am-row-amt ${l.type==='收入'?'inc':'exp'} am-num">${isShort?'⚠️ ':''}${escapeHtml(accountLabel)} ${l.type==='收入'?'+':'-'}${fmtRaw(l.amount)}</div>
             <button class="am-adj-btn" data-edit-tx="${l.id}" style="margin-top:4px;">編輯</button>
           </div>
         </div>`;
@@ -790,6 +792,25 @@
       </div>`;
   }
 
+  function donutSvg(segments, size, trackColor){
+    const stroke = Math.max(Math.round(size*0.13),6);
+    const r = (size-stroke)/2, c = 2*Math.PI*r;
+    const total = segments.reduce((s,x)=>s+x.value,0) || 1;
+    let offsetAcc = 0;
+    const circles = segments.map(seg=>{
+      const frac = Math.max(seg.value,0)/total;
+      const dash = frac*c;
+      const circle = `<circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${seg.color}" stroke-width="${stroke}"
+        stroke-dasharray="${dash} ${c-dash}" stroke-dashoffset="${-offsetAcc}" transform="rotate(-90 ${size/2} ${size/2})"/>`;
+      offsetAcc += dash;
+      return circle;
+    }).join('');
+    return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${trackColor}" stroke-width="${stroke}"/>
+      ${circles}
+    </svg>`;
+  }
+
   function ringSvg(pct, size, strokeColor, trackColor){
     const clamped = Math.min(Math.max(pct,0),1);
     const stroke = Math.max(Math.round(size*0.13),5);
@@ -802,6 +823,7 @@
   }
 
   function renderPocketRow(pocket, proj, showInterestBtn){
+    const expanded = expandedPocketIds.has(pocket.id);
     return `
     <div class="am-row">
       <div class="am-row-main">
@@ -811,13 +833,15 @@
       </div>
       <div>
         <div class="am-row-amt am-num">${fmtMoney(proj.balance)}</div>
-        <div style="text-align:right;margin-top:4px; display:flex; gap:6px; justify-content:flex-end;">
-          ${showInterestBtn ? `<button class="am-adj-btn" data-add-interest="${pocket.id}">入利息</button>` : ''}
-          <button class="am-adj-btn" data-edit-pocket="${pocket.id}">改名</button>
-          <button class="am-adj-btn" data-adjust-pocket="${pocket.id}">微調</button>
+        <div style="text-align:right;margin-top:4px; display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
+          ${expanded ? `
+            ${showInterestBtn ? `<button class="am-adj-btn" data-add-interest="${pocket.id}">入利息</button>` : ''}
+            <button class="am-adj-btn" data-edit-pocket="${pocket.id}">改名</button>
+            <button class="am-adj-btn" data-adjust-pocket="${pocket.id}">微調</button>
+            <button class="am-row-del" data-del-pocket="${pocket.id}" title="刪除">✕</button>
+          ` : `<button class="am-adj-btn" data-toggle-pocket-actions="${pocket.id}">編輯</button>`}
         </div>
       </div>
-      <button class="am-row-del" data-del-pocket="${pocket.id}" title="刪除">✕</button>
     </div>`;
   }
 
@@ -840,6 +864,7 @@
 
     const projections = state.pockets.map(p=>({pocket:p, proj:pocketProjection(p,cycle)}));
     const shortfalls = projections.filter(x=>x.proj.projected<0);
+    shortfallPocketIds = new Set(shortfalls.map(x=>x.pocket.id));
 
     const totalCash = state.pockets.reduce((s,p)=>s+pocketBalance(p),0);
     const currentCashOnly = projections.filter(x=>(x.pocket.category||'cash')==='cash').reduce((s,x)=>s+x.proj.balance,0);
@@ -995,11 +1020,13 @@
             <div class="am-net-eyebrow">總資產淨值(現金口袋+股票)</div>
             <button class="am-privacy-btn" id="am-toggle-privacy">${privacyMode?'👁️ 顯示':'🙈 隱藏'}</button>
           </div>
-          <div class="am-net-value am-num">${fmtMoney(totalAssets)}</div>
-          <div class="am-net-breakdown">現金口袋 <b class="am-num">${fmtMoney(totalCash)}</b>(${totalAssets>0?Math.round(totalCash/totalAssets*100):0}%)・股票 <b class="am-num">${fmtMoney(totalStock)}</b>(${totalAssets>0?Math.round(totalStock/totalAssets*100):0}%)</div>
-          <div class="am-split-bar">
-            <div style="width:${totalAssets>0?(totalCash/totalAssets*100):50}%; background:var(--green)"></div>
-            <div style="width:${totalAssets>0?(totalStock/totalAssets*100):50}%; background:var(--gold)"></div>
+          <div style="display:flex; align-items:center; gap:14px; margin-top:6px;">
+            <div class="am-ring-wrap" style="width:76px; height:76px; flex-shrink:0;">${donutSvg([{value:totalCash,color:'var(--green)'},{value:totalStock,color:'var(--gold)'}],76,'var(--hairline)')}</div>
+            <div style="flex:1; min-width:0;">
+              <div class="am-net-value am-num" style="font-size:24px;">${fmtMoney(totalAssets)}</div>
+              <div class="am-net-breakdown">現金口袋 <b class="am-num">${fmtMoney(totalCash)}</b>(${totalAssets>0?Math.round(totalCash/totalAssets*100):0}%)</div>
+              <div class="am-net-breakdown">股票 <b class="am-num">${fmtMoney(totalStock)}</b>(${totalAssets>0?Math.round(totalStock/totalAssets*100):0}%)</div>
+            </div>
           </div>
         </div>
 
@@ -1521,6 +1548,9 @@
 
     const addPocketBtn = $('#am-add-pocket'); if(addPocketBtn) addPocketBtn.onclick = ()=> openModal({type:'addPocket'});
     const transferBtn = $('#am-pocket-transfer'); if(transferBtn) transferBtn.onclick = ()=> openModal({type:'pocketTransfer', fromId:state.pockets[0]&&state.pockets[0].id, toId:state.pockets[1]&&state.pockets[1].id});
+    root.querySelectorAll('[data-toggle-pocket-actions]').forEach(b=>{
+      b.onclick = ()=>{ expandedPocketIds.add(b.dataset.togglePocketActions); render(); };
+    });
     root.querySelectorAll('[data-edit-pocket]').forEach(b=> b.onclick = ()=> openModal({type:'editPocket', pocketId:b.dataset.editPocket}));
     root.querySelectorAll('[data-pocket-detail]').forEach(b=> b.onclick = ()=> openModal({type:'pocketDetail', pocketId:b.dataset.pocketDetail}));
     root.querySelectorAll('[data-adjust-pocket]').forEach(b=> b.onclick = ()=> openModal({type:'adjustPocket', pocketId:b.dataset.adjustPocket}));
