@@ -262,6 +262,7 @@
   let assetSubTab = '收支';
   let shortfallPocketIds = new Set();
   let expandedPocketIds = new Set();
+  let expandedRowIds = new Set(); // 通用:key 格式為 "budget:xxx"、"fixed:xxx"、"stock:xxx"、"goal:xxx"
   let toastTimer = null;
 
   function uid(p){ return p+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
@@ -409,13 +410,32 @@
     });
     if(stocksMigrated) await persist('am2:stocks', state.stocks);
 
-    // 保險:舊分類名稱統一改名(Puli→多多、飲料→飲品),每次載入都檢查
+    // 保險:舊分類名稱統一改名(Puli→多多、飲料→飲品),每次載入都檢查——帳本跟快速項目清單都要處理
     let catRenamed = false;
     state.ledger.forEach(l=>{
       if(l.cat1==='Puli'){ l.cat1='多多'; catRenamed=true; }
       if(l.cat2==='飲料'){ l.cat2='飲品'; catRenamed=true; }
     });
     if(catRenamed) await persist('am2:ledger', state.ledger);
+
+    let quickItemsRenamed = false;
+    if(state.quickItems){
+      ['expense','income'].forEach(t=>{
+        (state.quickItems[t]||[]).forEach(qi=>{
+          if(qi.cat1==='Puli'){ qi.cat1='多多'; quickItemsRenamed=true; }
+          if(qi.cat2==='飲料'){ qi.cat2='飲品'; quickItemsRenamed=true; }
+        });
+        // 同一個大項目+細項如果因為改名變成重複了,只留一個
+        const seen = new Set();
+        state.quickItems[t] = (state.quickItems[t]||[]).filter(qi=>{
+          const key = qi.cat1+'|'+qi.cat2;
+          if(seen.has(key)){ quickItemsRenamed=true; return false; }
+          seen.add(key);
+          return true;
+        });
+      });
+    }
+    if(quickItemsRenamed) await persist('am2:quickItems', state.quickItems);
 
     // 保險:第一次把舊版固定式目標(帳戶/現金/股票)轉成可自訂的存錢目標清單
     if(state.savingsGoals===null){
@@ -967,6 +987,7 @@
           const totalTarget = g.totalTarget||0;
           const remaining = Math.max(totalTarget - current, 0);
           const monthsNeeded = actualMonthly>0 ? Math.ceil(remaining/actualMonthly) : null;
+          const gExpanded = expandedRowIds.has('goal:'+g.id);
           const ratio = totalTarget>0 ? Math.min(current/totalTarget,1) : 0;
           const pctDisplay = totalTarget>0 ? Math.round(current/totalTarget*100) : 0;
           let etaText = '還沒有足夠的完整發薪週期資料可以估計';
@@ -992,8 +1013,11 @@
                 <div class="am-row-sub">目標 ${fmtMoney(totalTarget)}</div>
               </div>
               <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
-                <button class="am-adj-btn" data-edit-savingsgoal="${g.id}">編輯</button>
-                <button class="am-row-del" data-del-savingsgoal="${g.id}" title="刪除">刪除</button>
+                ${gExpanded ? `
+                  <button class="am-adj-btn" data-edit-savingsgoal="${g.id}">編輯</button>
+                  <button class="am-row-del" data-del-savingsgoal="${g.id}" title="刪除">刪除</button>
+                  <button class="am-adj-btn" data-collapse-row="goal:${g.id}">收起</button>
+                ` : `<button class="am-adj-btn" data-expand-row="goal:${g.id}">編輯</button>`}
               </div>
             </div>
             <div style="margin-top:12px; padding-top:12px; border-top:1px dashed var(--hairline); display:flex; justify-content:space-between; gap:10px;">
@@ -1078,25 +1102,29 @@
                 const rate = latest.cost>0 ? (profit/latest.cost*100) : 0;
                 const monthlyRate = stockMonthlyReturnRate(st);
                 const totalDividend = (st.dividends||[]).reduce((s,d)=>s+d.amount,0);
+                const stExpanded = expandedRowIds.has('stock:'+st.id);
                 return `
-                <div class="am-row" style="align-items:flex-start;">
-                  <div class="am-row-main">
+                <div class="am-row" style="flex-direction:column; align-items:stretch;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
                     <div class="am-row-name">${escapeHtml(st.name)}</div>
-                    <div class="am-row-grid2" style="margin-top:4px;">
-                      <div class="am-row-sub">股數 ${latest.shares||0}</div>
-                      <div class="am-row-sub">成本 ${fmtMoney(latest.cost||0)}</div>
-                      <div class="am-row-sub">損益 <span style="color:${profit>=0?'var(--green)':'var(--rust)'}">${fmtMoney(profit)}(${rate.toFixed(1)}%)</span></div>
-                      <div class="am-row-sub">${monthlyRate!==null?('月報酬率 '+monthlyRate.toFixed(2)+'%'):'尚無月報酬率'}</div>
-                      <div class="am-row-sub">股利累計 <span style="color:var(--green)">${fmtMoney(totalDividend)}</span></div>
-                      <div class="am-row-sub">最新 ${latest.date||'-'}</div>
-                    </div>
-                    <div style="margin-top:5px; display:flex; gap:12px;">
+                    <div class="am-row-amt am-num">${fmtMoney(latest.marketValue||0)}</div>
+                  </div>
+                  <div class="am-row-grid2" style="margin-top:6px;">
+                    <div class="am-row-sub">股數 ${latest.shares||0}</div>
+                    <div class="am-row-sub">成本 ${fmtMoney(latest.cost||0)}</div>
+                    <div class="am-row-sub">損益 <span style="color:${profit>=0?'var(--green)':'var(--rust)'}">${fmtMoney(profit)}(${rate.toFixed(1)}%)</span></div>
+                    <div class="am-row-sub">${monthlyRate!==null?('月報酬率 '+monthlyRate.toFixed(2)+'%'):'尚無月報酬率'}</div>
+                    <div class="am-row-sub">股利累計 <span style="color:var(--green)">${fmtMoney(totalDividend)}</span></div>
+                    <div class="am-row-sub">最新 ${latest.date||'-'}</div>
+                  </div>
+                  <div style="margin-top:6px; display:flex; gap:12px; justify-content:flex-end; flex-wrap:wrap;">
+                    ${stExpanded ? `
                       <span class="am-detail-link" data-add-stock-entry="${st.id}">更新市值</span>
                       <span class="am-detail-link" data-add-dividend="${st.id}">+ 記一筆股利</span>
-                    </div>
+                      <button class="am-row-del" data-del-stock="${st.id}" title="刪除">刪除</button>
+                      <button class="am-adj-btn" data-collapse-row="stock:${st.id}">收起</button>
+                    ` : `<button class="am-adj-btn" data-expand-row="stock:${st.id}">編輯</button>`}
                   </div>
-                  <div class="am-row-amt am-num">${fmtMoney(latest.marketValue||0)}</div>
-                  <button class="am-row-del" data-del-stock="${st.id}" title="刪除">刪除</button>
                 </div>`;
               }).join('')}
           </div>
@@ -1111,6 +1139,7 @@
               state.fixedExpenses.map(f=>{
                 const pocket = state.pockets.find(p=>p.id===f.pocketId);
                 const paid = !!(f.paidCycles && f.paidCycles[cycle.key]);
+                const fExpanded = expandedRowIds.has('fixed:'+f.id);
                 return `
                 <div class="am-row">
                   <div class="am-checkbox ${paid?'checked':''}" data-toggle-fixed="${f.id}">${paid?'✓':''}</div>
@@ -1119,8 +1148,12 @@
                     <div class="am-row-sub">${pocket?escapeHtml(pocket.name):'未指派口袋'}</div>
                     <div class="am-row-sub">本期(${isoDate(cycle.start)} 起)${paid?'已扣款':'尚未扣款'}</div>
                   </div>
-                  <div class="am-row-amt am-num">${fmtMoney(f.amount)}</div>
-                  <button class="am-row-del" data-del-fixed="${f.id}" title="刪除">刪除</button>
+                  <div style="text-align:right;">
+                    <div class="am-row-amt am-num">${fmtMoney(f.amount)}</div>
+                    <div style="margin-top:4px; display:flex; gap:6px; justify-content:flex-end;">
+                      ${fExpanded ? `<button class="am-row-del" data-del-fixed="${f.id}" title="刪除">刪除</button><button class="am-adj-btn" data-collapse-row="fixed:${f.id}">收起</button>` : `<button class="am-adj-btn" data-expand-row="fixed:${f.id}">編輯</button>`}
+                    </div>
+                  </div>
                 </div>`;
               }).join('')}
           </div>
@@ -1156,6 +1189,7 @@
                 const pct = displayAmount>0 ? Math.min(spent/displayAmount,1) : 0;
                 const pctDisplay = displayAmount>0 ? Math.round(spent/displayAmount*100) : 0;
                 const over = spent>displayAmount;
+                const bExpanded = expandedRowIds.has('budget:'+b.id);
                 return `
                 <div style="padding:11px 0; border-bottom:1px solid var(--hairline);">
                   <div style="display:grid; grid-template-columns:46px 1fr; gap:12px; align-items:center;">
@@ -1169,7 +1203,7 @@
                   </div>
                   <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:6px; padding-left:58px;">
                     <div class="am-row-sub">已花 ${fmtMoney(spent)} / ${fmtMoney(displayAmount)}・${over?('<span class="am-pocket-shortfall">超支 '+fmtMoney(spent-displayAmount)+'</span>'):('<span class="am-pocket-ok">剩餘 '+fmtMoney(displayAmount-spent)+'</span>')}</div>
-                    <button class="am-row-del" data-del-budget="${b.id}" title="刪除">刪除</button>
+                    ${bExpanded ? `<button class="am-row-del" data-del-budget="${b.id}" title="刪除">刪除</button><button class="am-adj-btn" data-collapse-row="budget:${b.id}">收起</button>` : `<button class="am-adj-btn" data-expand-row="budget:${b.id}">編輯</button>`}
                   </div>
                 </div>`;
               }); })().join('')}
@@ -1567,6 +1601,12 @@
     });
     root.querySelectorAll('[data-collapse-pocket-actions]').forEach(b=>{
       b.onclick = ()=>{ expandedPocketIds.delete(b.dataset.collapsePocketActions); render(); };
+    });
+    root.querySelectorAll('[data-expand-row]').forEach(b=>{
+      b.onclick = ()=>{ expandedRowIds.add(b.dataset.expandRow); render(); };
+    });
+    root.querySelectorAll('[data-collapse-row]').forEach(b=>{
+      b.onclick = ()=>{ expandedRowIds.delete(b.dataset.collapseRow); render(); };
     });
     root.querySelectorAll('[data-edit-pocket]').forEach(b=> b.onclick = ()=> openModal({type:'editPocket', pocketId:b.dataset.editPocket}));
     root.querySelectorAll('[data-pocket-detail]').forEach(b=> b.onclick = ()=> openModal({type:'pocketDetail', pocketId:b.dataset.pocketDetail}));
