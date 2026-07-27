@@ -201,7 +201,7 @@
     'Line pay money': {name:'Line Pay', note:'', category:'cash'},
     'Quokka': {name:'Quokka', note:'', category:'cash'},
   };
-  const SEED_VERSION = 7;
+  const SEED_VERSION = 8;
   const DEFAULT_POCKET_BALANCES = {
     '未指定帳戶(現金)': 571,
     '中信 吃喝雜支 218-83=135': 6645,
@@ -231,10 +231,11 @@
     {name:'多多', amount:2000, account:'Line 4500一次性支出 購物'},
     {name:'醫療', amount:1500, account:'Line 4500一次性支出 購物'},
     {name:'生活', amount:2000, account:'Line 4500一次性支出 購物'},
-    {name:'娛樂學習', amount:500, account:'Line 4500一次性支出 購物'},
+    {name:'娛樂', amount:500, account:'Line 4500一次性支出 購物'},
+    {name:'學習', amount:500, account:'Line 4500一次性支出 購物'},
     {name:'旅行', amount:1500, account:'Line 4500一次性支出 購物'},
   ];
-  const CATEGORY_ALIASES = { '多多':['多多','Puli'], '娛樂學習':['娛樂學習','娛樂','學習'] };
+  const CATEGORY_ALIASES = { '多多':['多多','Puli'] };
   const EXCLUDED_POCKET_ACCOUNTS = ['群益 6000'];
   let modal = null;
   let budgetView = { mode:'month', period:null, useActualMonths:false };
@@ -353,13 +354,13 @@
       state.budgets = Array.isArray(budgets) ? budgets : [];
       state.ledger = Array.isArray(ledger) ? ledger : [];
       state.payday = (payday && typeof payday==='object') ? payday : {defaultDay:5, overrides:{}};
-      state.goal = (goal && typeof goal==='object') ? goal : {emergencyTarget:0, cashTarget:1000000, stockMonthlyTarget:0, deadline:''};
+      state.goal = (goal && typeof goal==='object') ? goal : {emergencyTarget:1000000, stockMonthlyTarget:0, deadline:''};
       state.quickItems = (quickItems && typeof quickItems==='object') ? quickItems : null;
       state.lastPocketId = lastPocketId || null;
     }catch(e){
       console.error(e);
       state.pockets=[]; state.stocks=[]; state.fixedExpenses=[]; state.budgets=[]; state.ledger=[];
-      state.payday={defaultDay:5,overrides:{}}; state.goal={emergencyTarget:0, cashTarget:1000000, stockMonthlyTarget:0, deadline:''};
+      state.payday={defaultDay:5,overrides:{}}; state.goal={emergencyTarget:1000000, stockMonthlyTarget:0, deadline:''};
       state.quickItems=null; state.lastPocketId=null;
     }
 
@@ -379,10 +380,14 @@
     });
     if(stocksMigrated) await persist('am2:stocks', state.stocks);
 
-    // 保險:舊版單一目標(target)自動轉成新的三個目標(緊急備用金/手頭現金/股票每月投入)
-    if(state.goal && state.goal.cashTarget===undefined){
-      const oldTarget = state.goal.target || 0;
-      state.goal = { emergencyTarget:0, cashTarget: oldTarget, stockMonthlyTarget:0, deadline: state.goal.deadline||'' };
+    // 保險:舊版目標格式自動轉成新的兩個目標(緊急備用金[帳戶+現金合併]/股票每月投入)
+    if(state.goal && state.goal.emergencyTarget===undefined){
+      const oldTarget = (state.goal.target||0) + (state.goal.cashTarget||0) + (state.goal.emergencyTarget||0);
+      state.goal = { emergencyTarget: oldTarget, stockMonthlyTarget: state.goal.stockMonthlyTarget||0, deadline: state.goal.deadline||'' };
+      await persist('am:goal', state.goal);
+    } else if(state.goal && state.goal.cashTarget!==undefined){
+      // 曾經有過三目標版本,把手頭現金併回緊急備用金
+      state.goal = { emergencyTarget: (state.goal.emergencyTarget||0) + (state.goal.cashTarget||0), stockMonthlyTarget: state.goal.stockMonthlyTarget||0, deadline: state.goal.deadline||'' };
       await persist('am:goal', state.goal);
     }
 
@@ -541,6 +546,16 @@
     return {rate: total/cycles.length, months: cycles.length};
   }
 
+  function avgMonthlyInterest(pocket){
+    const entries = (pocket.manualAdjustments||[]).filter(a=>a.type==='interest').slice().sort((a,b)=>a.date.localeCompare(b.date));
+    if(entries.length===0) return {rate:0, months:0};
+    const total = entries.reduce((s,e)=>s+e.amount,0);
+    if(entries.length===1) return {rate: total, months: 1};
+    const d1 = new Date(entries[0].date), d2 = new Date(entries[entries.length-1].date);
+    const months = Math.max((d2.getFullYear()-d1.getFullYear())*12 + (d2.getMonth()-d1.getMonth()), 1);
+    return {rate: total/months, months};
+  }
+
   function stockEntries(st){ return (st.entries||[]).slice().sort((a,b)=>a.date.localeCompare(b.date)); }
   function stockLatest(st){ const e = stockEntries(st); return e[e.length-1] || {date:'', shares:0, cost:0, marketValue:0}; }
   function stockMonthlyReturnRate(st){
@@ -553,23 +568,20 @@
     const growth = last.marketValue / first.marketValue;
     return (Math.pow(growth, 1/months) - 1) * 100;
   }
+  const STOCK_INVEST_ACCOUNT = '群益 6000';
   function avgMonthlyStockInvestment(){
-    let totalAdded = 0, minDate=null, maxDate=null;
-    state.stocks.forEach(st=>{
-      const e = stockEntries(st);
-      for(let i=1;i<e.length;i++){
-        const added = (e[i].cost||0) - (e[i-1].cost||0);
-        if(added>0) totalAdded += added;
-      }
-      e.forEach(x=>{
-        if(!minDate || x.date<minDate) minDate=x.date;
-        if(!maxDate || x.date>maxDate) maxDate=x.date;
-      });
+    const cycles = completedCycles();
+    if(cycles.length===0) return {rate:0, months:0};
+    let total = 0;
+    cycles.forEach(cy=>{
+      const sum = state.ledger.filter(l=>{
+        if(l.account!==STOCK_INVEST_ACCOUNT) return false;
+        const d = new Date(l.datetime);
+        return d>=cy.start && d<cy.end;
+      }).reduce((s,l)=>s+l.amount,0);
+      total += sum;
     });
-    if(!minDate || !maxDate || minDate===maxDate) return {rate:0, months:0};
-    const d1=new Date(minDate), d2=new Date(maxDate);
-    const months = Math.max((d2.getFullYear()-d1.getFullYear())*12+(d2.getMonth()-d1.getMonth()),1);
-    return {rate: totalAdded/months, months};
+    return {rate: total/cycles.length, months: cycles.length};
   }
 
 
@@ -661,7 +673,7 @@
         <div class="am-row">
           <div class="am-row-main">
             <div class="am-row-name">${escapeHtml(l.cat1)}${l.cat2?('・'+escapeHtml(l.cat2)):''}</div>
-            <div class="am-row-sub">${l.datetime.slice(0,10)}・${escapeHtml(l.account)}${l.note?('・'+escapeHtml(l.note)):''}</div>
+            <div class="am-row-sub">${l.datetime.slice(0,10)} ${l.datetime.slice(11,16)}・${escapeHtml(l.account)}${l.note?('・'+escapeHtml(l.note)):''}</div>
           </div>
           <div class="am-row-amt ${l.type==='收入'?'inc':'exp'} am-num">${l.type==='收入'?'+':'-'}${Math.abs(l.amount).toLocaleString('zh-Hant-TW')}</div>
           <button class="am-adj-btn" data-edit-tx="${l.id}" style="margin-left:6px;">編輯</button>
@@ -708,17 +720,17 @@
       </div>`;
   }
 
-  function renderPocketRow(pocket, proj){
+  function renderPocketRow(pocket, proj, showInterestBtn){
     return `
     <div class="am-row">
       <div class="am-row-main">
         <div class="am-row-name">${escapeHtml(pocket.name)}</div>
-        ${pocket.note ? `<div class="am-row-sub">${escapeHtml(pocket.note)}</div>` : ''}
         <div class="am-row-sub">預估發薪前剩餘:<span class="${proj.projected<0?'am-pocket-shortfall':'am-pocket-ok'}">${fmtMoney(proj.projected)}</span> <span class="am-detail-link" data-pocket-detail="${pocket.id}">查看明細</span></div>
       </div>
       <div>
         <div class="am-row-amt am-num">${fmtMoney(proj.balance)}</div>
         <div style="text-align:right;margin-top:4px; display:flex; gap:6px; justify-content:flex-end;">
+          ${showInterestBtn ? `<button class="am-adj-btn" data-add-interest="${pocket.id}">入利息</button>` : ''}
           <button class="am-adj-btn" data-edit-pocket="${pocket.id}">改名</button>
           <button class="am-adj-btn" data-adjust-pocket="${pocket.id}">微調</button>
         </div>
@@ -748,14 +760,12 @@
     const shortfalls = projections.filter(x=>x.proj.projected<0);
 
     const totalCash = state.pockets.reduce((s,p)=>s+pocketBalance(p),0);
-    const currentCashOnly = projections.filter(x=>(x.pocket.category||'cash')!=='savings').reduce((s,x)=>s+x.proj.balance,0);
-    const currentEmergency = projections.filter(x=>x.pocket.category==='savings').reduce((s,x)=>s+x.proj.balance,0);
+    const currentCashOnly = projections.filter(x=>(x.pocket.category||'cash')==='cash').reduce((s,x)=>s+x.proj.balance,0);
+    const currentEmergency = projections.filter(x=>x.pocket.category==='savings'||x.pocket.category==='emergency_cash').reduce((s,x)=>s+x.proj.balance,0);
     const totalStock = state.stocks.reduce((s,st)=>s+(stockLatest(st).marketValue||0),0);
     const totalAssets = totalCash + totalStock;
-    const savingsTarget = (state.goal.emergencyTarget||0) + (state.goal.cashTarget||0);
-    const savingsCurrent = currentCashOnly + currentEmergency;
-    const goalRatio = savingsTarget>0 ? Math.min(savingsCurrent/savingsTarget,1) : 0;
-    const goalPct = savingsTarget>0 ? Math.round((savingsCurrent/savingsTarget)*100) : 0;
+    const goalRatio = (state.goal.emergencyTarget||0)>0 ? Math.min(currentEmergency/state.goal.emergencyTarget,1) : 0;
+    const goalPct = (state.goal.emergencyTarget||0)>0 ? Math.round((currentEmergency/state.goal.emergencyTarget)*100) : 0;
 
     const ringSize=92, stroke=9, r=(ringSize-stroke)/2, c=2*Math.PI*r;
     const ringHtml = `<svg width="${ringSize}" height="${ringSize}" viewBox="0 0 ${ringSize} ${ringSize}">
@@ -794,9 +804,9 @@
         ${assetSubTab==='存錢' ? `
         <div class="am-card am-net-card">
           <div class="am-net-info">
-            <div class="am-net-eyebrow">現金+緊急備用金 存錢目標</div>
-            <div class="am-net-value am-num">${fmtMoney(savingsCurrent)}</div>
-            <div class="am-net-breakdown">目標 <b class="am-num">${fmtMoney(savingsTarget)}</b></div>
+            <div class="am-net-eyebrow">緊急備用金(帳戶+現金)</div>
+            <div class="am-net-value am-num">${fmtMoney(currentEmergency)}</div>
+            <div class="am-net-breakdown">目標 <b class="am-num">${fmtMoney(state.goal.emergencyTarget||0)}</b></div>
             <div class="am-net-goal-text">達成 <b>${goalPct}%</b>${state.goal.deadline?('・目標日 '+state.goal.deadline):''}</div>
           </div>
           <div class="am-ring-wrap" id="am-goal-ring">${ringHtml}
@@ -805,21 +815,17 @@
         </div>
 
         <div class="am-card">
-          <div class="am-section-title">三項目標對照</div>
+          <div class="am-section-title">兩項目標對照</div>
           <div class="am-row" style="border-bottom:1px solid var(--hairline);">
-            <div class="am-row-main"><div class="am-row-name">緊急備用金</div><div class="am-row-sub">目標 ${fmtMoney(state.goal.emergencyTarget||0)}</div></div>
+            <div class="am-row-main"><div class="am-row-name">緊急備用金(帳戶+現金)</div><div class="am-row-sub">目標 ${fmtMoney(state.goal.emergencyTarget||0)}</div></div>
             <div class="am-row-amt am-num" style="color:${currentEmergency>=(state.goal.emergencyTarget||0)?'var(--green)':'var(--rust)'}">${currentEmergency>=(state.goal.emergencyTarget||0)?'已達成 +':'還差 '}${fmtMoney(Math.abs(currentEmergency-(state.goal.emergencyTarget||0)))}</div>
-          </div>
-          <div class="am-row" style="border-bottom:1px solid var(--hairline);">
-            <div class="am-row-main"><div class="am-row-name">手頭現金</div><div class="am-row-sub">目標 ${fmtMoney(state.goal.cashTarget||0)}</div></div>
-            <div class="am-row-amt am-num" style="color:${currentCashOnly>=(state.goal.cashTarget||0)?'var(--green)':'var(--rust)'}">${currentCashOnly>=(state.goal.cashTarget||0)?'已達成 +':'還差 '}${fmtMoney(Math.abs(currentCashOnly-(state.goal.cashTarget||0)))}</div>
           </div>
           ${(()=>{
             const {rate:stockRate, months:stockMonths} = avgMonthlyStockInvestment();
             const target = state.goal.stockMonthlyTarget||0;
             if(stockMonths===0) return `
             <div class="am-row">
-              <div class="am-row-main"><div class="am-row-name">股票每月投入</div><div class="am-row-sub">目標每月 ${fmtMoney(target)}・還沒有足夠的股票歷史紀錄可以算實際投入速度(至少要更新過 2 次紀錄)</div></div>
+              <div class="am-row-main"><div class="am-row-name">股票每月投入</div><div class="am-row-sub">目標每月 ${fmtMoney(target)}・還沒有完整發薪週期的轉帳紀錄可以算(用「轉帳」把錢轉進群益投資帳戶就會自動算進來)</div></div>
             </div>`;
             return `
             <div class="am-row">
@@ -830,8 +836,43 @@
         </div>
 
         ${(()=>{
-          const {rate, months} = avgMonthlyNetFlow();
-          const remaining = Math.max(savingsTarget - savingsCurrent, 0);
+          const savingsPockets = state.pockets.filter(p=>p.category==='savings');
+          const interestRows = savingsPockets.map(p=>{
+            const {rate, months} = avgMonthlyInterest(p);
+            return {name:p.name, rate, months};
+          }).filter(r=>r.months>0);
+          if(interestRows.length===0) return '';
+          return `
+          <div class="am-card">
+            <div class="am-section-title">緊急備用金帳戶利息</div>
+            <div class="am-list">
+              ${interestRows.map(r=>`
+                <div class="am-row">
+                  <div class="am-row-main"><div class="am-row-name">${escapeHtml(r.name)}</div><div class="am-row-sub">依過去 ${r.months} 個月的入帳紀錄計算</div></div>
+                  <div class="am-row-amt am-num" style="color:var(--green)">平均每月 ${fmtMoney(r.rate)}</div>
+                </div>`).join('')}
+            </div>
+          </div>`;
+        })()}
+
+        ${(()=>{
+          const emergencyAccounts = new Set(state.pockets.filter(p=>p.category==='savings'||p.category==='emergency_cash').map(p=>p.account));
+          const cycles = completedCycles();
+          let totalFlow = 0;
+          cycles.forEach(cy=>{
+            const sum = state.ledger.filter(l=>{
+              if(EXCLUDED_FLOW_CATS.includes(l.cat1)) return false;
+              if(!emergencyAccounts.has(l.account)) return false;
+              const d = new Date(l.datetime);
+              return d>=cy.start && d<cy.end;
+            }).reduce((s,l)=>s+l.amount,0);
+            totalFlow += sum;
+          });
+          const flowRate = cycles.length>0 ? totalFlow/cycles.length : 0;
+          let interestRate = 0;
+          state.pockets.filter(p=>p.category==='savings').forEach(p=>{ interestRate += avgMonthlyInterest(p).rate; });
+          const rate = flowRate + interestRate;
+          const remaining = Math.max((state.goal.emergencyTarget||0) - currentEmergency, 0);
           const monthsNeeded = rate>0 ? Math.ceil(remaining/rate) : null;
           let etaText = '';
           if(monthsNeeded!==null){
@@ -840,16 +881,16 @@
           }
           return `
           <div class="am-card">
-            <div class="am-section-title">存錢速度預估</div>
+            <div class="am-section-title">緊急備用金達成速度預估</div>
             <div class="am-row" style="border-bottom:1px solid var(--hairline);">
               <div class="am-row-main">
-                <div class="am-row-name">平均每期(發薪週期)存下</div>
-                <div class="am-row-sub">只算完整的發薪週期,依過去 ${months} 個完整週期計算</div>
+                <div class="am-row-name">平均每期(發薪週期)存入+利息</div>
+                <div class="am-row-sub">只算完整的發薪週期,依過去 ${cycles.length} 個完整週期的存入紀錄,加上利息</div>
               </div>
               <div class="am-row-amt am-num" style="color:${rate>=0?'var(--green)':'var(--rust)'}">${fmtMoney(rate)}</div>
             </div>
             <div class="am-row" style="border-bottom:1px solid var(--hairline);">
-              <div class="am-row-main"><div class="am-row-name">現金+緊急備用金 距離目標還差</div></div>
+              <div class="am-row-main"><div class="am-row-name">距離目標還差</div></div>
               <div class="am-row-amt am-num">${fmtMoney(remaining)}</div>
             </div>
             <div class="am-row">
@@ -898,9 +939,10 @@
 
         <div class="am-card">
           <div class="am-section-title">現金口袋 <span style="display:flex; gap:10px;"><button class="am-add-btn" id="am-pocket-transfer">轉帳</button><button class="am-add-btn" id="am-add-pocket">＋ 新增口袋</button></span></div>
+          <div class="am-hint" style="margin-top:0;">合計 <b class="am-num" style="color:var(--ink);">${fmtMoney(currentCashOnly)}</b></div>
           <div class="am-list">
             ${(()=>{
-              const cashList = projections.filter(x=>(x.pocket.category||'cash')!=='savings');
+              const cashList = projections.filter(x=>(x.pocket.category||'cash')==='cash');
               if(cashList.length===0) return '<div class="am-empty">還沒有口袋,匯入 CSV 或手動新增</div>';
               return cashList.map(({pocket,proj})=>renderPocketRow(pocket,proj)).join('');
             })()}
@@ -908,18 +950,20 @@
         </div>
 
         <div class="am-card">
-          <div class="am-section-title">儲蓄 / 緊急備用金</div>
+          <div class="am-section-title">緊急備用金(帳戶+現金)</div>
+          <div class="am-hint" style="margin-top:0;">合計 <b class="am-num" style="color:var(--ink);">${fmtMoney(currentEmergency)}</b></div>
           <div class="am-list">
             ${(()=>{
-              const savingsList = projections.filter(x=>x.pocket.category==='savings');
-              if(savingsList.length===0) return '<div class="am-empty">還沒有儲蓄類口袋</div>';
-              return savingsList.map(({pocket,proj})=>renderPocketRow(pocket,proj)).join('');
+              const savingsList = projections.filter(x=>x.pocket.category==='savings'||x.pocket.category==='emergency_cash');
+              if(savingsList.length===0) return '<div class="am-empty">還沒有緊急備用金類口袋</div>';
+              return savingsList.map(({pocket,proj})=>renderPocketRow(pocket,proj,pocket.category==='savings')).join('');
             })()}
           </div>
         </div>
 
         <div class="am-card">
           <div class="am-section-title">股票 <button class="am-add-btn" id="am-add-stock">＋ 新增持股</button></div>
+          <div class="am-hint" style="margin-top:0;">合計 <b class="am-num" style="color:var(--ink);">${fmtMoney(totalStock)}</b></div>
           <div class="am-list">
             ${state.stocks.length===0 ? '<div class="am-empty">還沒有持股紀錄</div>' :
               state.stocks.map(st=>{
@@ -1048,6 +1092,7 @@
           </select>
         </div>
         <div class="am-field"><label>日期</label><input type="date" id="am-etx-date" value="${tx.datetime.slice(0,10)}"></div>
+        <div class="am-field"><label>時間</label><input type="time" id="am-etx-time" value="${tx.datetime.slice(11,16)}"></div>
         <div class="am-field"><label>備註(選填)</label><input type="text" id="am-etx-note" value="${escapeHtml(tx.note||'')}"></div>
         <div class="am-sheet-actions"><button class="am-btn danger" id="am-del-tx">刪除</button><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-edittx">儲存</button></div>
       </div></div>`;
@@ -1067,6 +1112,7 @@
           </select>
         </div>
         <div class="am-field"><label>日期</label><input type="date" id="am-qe-date" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div class="am-field"><label>時間</label><input type="time" id="am-qe-time" value="${new Date().toTimeString().slice(0,5)}"></div>
         <div class="am-field"><label>備註(選填)</label><input type="text" id="am-qe-note" placeholder="說明一下"></div>
         <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-quick-entry">儲存</button></div>
       </div></div>`;
@@ -1116,10 +1162,10 @@
         <div class="am-field"><label>類別</label>
           <div class="am-seg">
             <button class="${(modal.category||'cash')==='cash'?'sel inc':''}" data-set-pkcat="cash">現金口袋</button>
-            <button class="${modal.category==='savings'?'sel inc':''}" data-set-pkcat="savings">儲蓄/緊急備用金</button>
+            <button class="${modal.category==='savings'?'sel inc':''}" data-set-pkcat="savings">緊急備用金帳戶</button>
+            <button class="${modal.category==='emergency_cash'?'sel inc':''}" data-set-pkcat="emergency_cash">緊急備用金現金</button>
           </div>
         </div>
-        <div class="am-field"><label>備註(選填,例如分配策略)</label><input type="text" id="am-pk-note" placeholder="例如:生活餘額、旅遊預存2500" value="${modal.note||''}"></div>
         <div class="am-field"><label>起始餘額</label><input type="number" inputmode="decimal" id="am-pk-balance" value="${modal.startingBalance||0}"></div>
         <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-pocket">儲存</button></div>
       </div></div>`;
@@ -1170,10 +1216,10 @@
         <div class="am-field"><label>類別</label>
           <div class="am-seg">
             <button class="${cat==='cash'?'sel inc':''}" data-set-epcat="cash">現金口袋</button>
-            <button class="${cat==='savings'?'sel inc':''}" data-set-epcat="savings">儲蓄/緊急備用金</button>
+            <button class="${cat==='savings'?'sel inc':''}" data-set-epcat="savings">緊急備用金帳戶</button>
+            <button class="${cat==='emergency_cash'?'sel inc':''}" data-set-epcat="emergency_cash">緊急備用金現金</button>
           </div>
         </div>
-        <div class="am-field"><label>備註(選填,例如分配策略)</label><input type="text" id="am-ep-note" value="${escapeHtml(pocket?(pocket.note||''):'')}"></div>
         <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-editpocket">儲存</button></div>
       </div></div>`;
     }
@@ -1182,11 +1228,18 @@
       <div class="am-overlay" id="am-overlay"><div class="am-sheet">
         <div class="am-sheet-title">口袋間轉帳</div>
         <div class="am-field"><label>從哪個口袋轉出</label>
-          <select id="am-tr-from">${state.pockets.map(p=>`<option value="${p.id}" ${modal.fromId===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}</select>
+          <select id="am-tr-from">
+            ${state.pockets.map(p=>`<option value="${p.id}" ${modal.fromId===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}
+            <option value="STOCK" ${modal.fromId==='STOCK'?'selected':''}>群益(投資帳戶)</option>
+          </select>
         </div>
         <div class="am-field"><label>轉入哪個口袋</label>
-          <select id="am-tr-to">${state.pockets.map(p=>`<option value="${p.id}" ${modal.toId===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}</select>
+          <select id="am-tr-to">
+            ${state.pockets.map(p=>`<option value="${p.id}" ${modal.toId===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}
+            <option value="STOCK" ${modal.toId==='STOCK'?'selected':''}>群益(投資帳戶)</option>
+          </select>
         </div>
+        <div class="am-hint">選「群益(投資帳戶)」會記進「股票每月投入」的統計裡,但不會出現在現金口袋清單(股票餘額請另外去「股票」那邊更新)</div>
         <div class="am-field"><label>金額</label><input type="number" inputmode="decimal" id="am-tr-amount" placeholder="0"></div>
         <div class="am-field"><label>手續費(選填)</label><input type="number" inputmode="decimal" id="am-tr-fee" placeholder="0"></div>
         <div class="am-field"><label>日期</label><input type="date" id="am-tr-date" value="${new Date().toISOString().slice(0,10)}"></div>
@@ -1196,13 +1249,26 @@
 
     if(modal.type==='adjustPocket'){
       const pocket = state.pockets.find(p=>p.id===modal.pocketId);
+      const currentBalance = pocket ? pocketBalance(pocket) : 0;
       return `
       <div class="am-overlay" id="am-overlay"><div class="am-sheet">
         <div class="am-sheet-title">微調「${escapeHtml(pocket?pocket.name:'')}」餘額</div>
-        <div class="am-hint">正數增加、負數減少,用於匯入資料之間的臨時調整</div>
-        <div class="am-field"><label>金額</label><input type="number" inputmode="decimal" id="am-adj-amount" placeholder="例如 -500 或 500"></div>
+        <div class="am-hint">目前系統算出來的餘額是 ${fmtMoney(currentBalance)}。直接填「實際應該是多少」,系統會自動算出差額幫你補上。</div>
+        <div class="am-field"><label>實際餘額</label><input type="number" inputmode="decimal" id="am-adj-amount" placeholder="填實際餘額,例如 ${Math.round(currentBalance)}" value="${Math.round(currentBalance)}"></div>
         <div class="am-field"><label>備註(選填)</label><input type="text" id="am-adj-note" placeholder="說明一下這筆調整"></div>
         <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-adjust">儲存</button></div>
+      </div></div>`;
+    }
+
+    if(modal.type==='addInterest'){
+      const pocket = state.pockets.find(p=>p.id===modal.pocketId);
+      return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">「${escapeHtml(pocket?pocket.name:'')}」入利息</div>
+        <div class="am-hint">記錄每次實際入帳的利息金額,系統會用這個算出平均每月利息、預估未來成長</div>
+        <div class="am-field"><label>日期</label><input type="date" id="am-int-date" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div class="am-field"><label>利息金額</label><input type="number" inputmode="decimal" id="am-int-amount" placeholder="0"></div>
+        <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-interest">儲存</button></div>
       </div></div>`;
     }
 
@@ -1283,8 +1349,7 @@
     if(modal.type==='setGoal') return `
       <div class="am-overlay" id="am-overlay"><div class="am-sheet">
         <div class="am-sheet-title">設定存錢目標</div>
-        <div class="am-field"><label>緊急備用金目標</label><input type="number" inputmode="decimal" id="am-goal-emergency" value="${modal.emergencyTarget ?? state.goal.emergencyTarget ?? 0}"></div>
-        <div class="am-field"><label>手頭現金目標</label><input type="number" inputmode="decimal" id="am-goal-cash" value="${modal.cashTarget ?? state.goal.cashTarget ?? 0}"></div>
+        <div class="am-field"><label>緊急備用金目標(帳戶+現金)</label><input type="number" inputmode="decimal" id="am-goal-emergency" value="${modal.emergencyTarget ?? state.goal.emergencyTarget ?? 0}"></div>
         <div class="am-field"><label>股票每月投入目標</label><input type="number" inputmode="decimal" id="am-goal-stock" value="${modal.stockMonthlyTarget ?? state.goal.stockMonthlyTarget ?? 0}"></div>
         <div class="am-field"><label>目標日期(選填)</label><input type="date" id="am-goal-date" value="${modal.deadline ?? state.goal.deadline}"></div>
         <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-goal">儲存</button></div>
@@ -1336,6 +1401,7 @@
     root.querySelectorAll('[data-edit-pocket]').forEach(b=> b.onclick = ()=> openModal({type:'editPocket', pocketId:b.dataset.editPocket}));
     root.querySelectorAll('[data-pocket-detail]').forEach(b=> b.onclick = ()=> openModal({type:'pocketDetail', pocketId:b.dataset.pocketDetail}));
     root.querySelectorAll('[data-adjust-pocket]').forEach(b=> b.onclick = ()=> openModal({type:'adjustPocket', pocketId:b.dataset.adjustPocket}));
+    root.querySelectorAll('[data-add-interest]').forEach(b=> b.onclick = ()=> openModal({type:'addInterest', pocketId:b.dataset.addInterest}));
     root.querySelectorAll('[data-del-pocket]').forEach(b=> b.onclick = ()=> openModal({type:'confirmDel', kind:'pocket', id:b.dataset.delPocket, label:'這個口袋'}));
 
     const addStockBtn = $('#am-add-stock'); if(addStockBtn) addStockBtn.onclick = ()=> openModal({type:'addStock'});
@@ -1388,6 +1454,7 @@
         const amount = parseFloat($('#am-etx-amount').value);
         const pocketId = $('#am-etx-pocket').value;
         const date = $('#am-etx-date').value;
+        const time = $('#am-etx-time').value || tx.datetime.slice(11,16);
         const note = $('#am-etx-note').value.trim();
         const pocket = state.pockets.find(p=>p.id===pocketId);
         if(!cat1){ showToast('請輸入大分類'); return; }
@@ -1398,7 +1465,7 @@
         tx.cat1 = cat1; tx.cat2 = cat2;
         tx.amount = tx.type==='收入' ? Math.abs(amount) : -Math.abs(amount);
         tx.account = pocket.account;
-        tx.datetime = date+'T'+tx.datetime.slice(11);
+        tx.datetime = date+'T'+time+':00';
         tx.note = note;
         closeModal(); showToast('已更新這筆紀錄');
         persist('am2:ledger', state.ledger);
@@ -1416,14 +1483,14 @@
         const amount = parseFloat($('#am-qe-amount').value);
         const pocketId = $('#am-qe-pocket').value;
         const date = $('#am-qe-date').value;
+        const time = $('#am-qe-time').value || new Date().toTimeString().slice(0,5);
         const note = $('#am-qe-note').value.trim();
         if(!amount || amount<=0){ showToast('請輸入正確金額'); return; }
         const pocket = state.pockets.find(p=>p.id===pocketId);
         if(!pocket){ showToast('請先新增一個口袋'); return; }
         if(!date){ showToast('請選擇日期'); return; }
         const signed = item.type==='income' ? Math.abs(amount) : -Math.abs(amount);
-        const nowTime = new Date().toTimeString().slice(0,8);
-        state.ledger.push({id:uid('lg'), type:item.type==='income'?'收入':'支出', datetime:date+'T'+nowTime, account:pocket.account, amount:signed, cat1:item.cat1, cat2:item.cat2, note});
+        state.ledger.push({id:uid('lg'), type:item.type==='income'?'收入':'支出', datetime:date+'T'+time+':00', account:pocket.account, amount:signed, cat1:item.cat1, cat2:item.cat2, note});
         state.lastPocketId = pocketId;
         closeModal(); showToast('已記一筆');
         persist('am2:ledger', state.ledger);
@@ -1458,17 +1525,16 @@
     if(modal.type==='addPocket'){
       root.querySelectorAll('[data-set-pkcat]').forEach(b=>{
         b.onclick = ()=>{
-          modal.name = $('#am-pk-name').value; modal.note = $('#am-pk-note').value; modal.startingBalance = $('#am-pk-balance').value;
+          modal.name = $('#am-pk-name').value; modal.startingBalance = $('#am-pk-balance').value;
           modal.category = b.dataset.setPkcat; render();
         };
       });
       $('#am-save-pocket').onclick = ()=>{
         const name = $('#am-pk-name').value.trim();
-        const note = $('#am-pk-note').value.trim();
         const bal = parseFloat($('#am-pk-balance').value)||0;
         const category = modal.category || 'cash';
         if(!name){ showToast('請輸入口袋名稱'); return; }
-        state.pockets.push({id:uid('pk'), account:'manual:'+uid('a'), name, note, category, startingBalance:bal, manualAdjustments:[]});
+        state.pockets.push({id:uid('pk'), account:'manual:'+uid('a'), name, category, startingBalance:bal, manualAdjustments:[]});
         closeModal(); showToast('已新增口袋');
         persist('am2:pockets', state.pockets);
       };
@@ -1479,10 +1545,9 @@
       });
       $('#am-save-editpocket').onclick = ()=>{
         const name = $('#am-ep-name').value.trim();
-        const note = $('#am-ep-note').value.trim();
         if(!name){ showToast('請輸入口袋名稱'); return; }
         const pocket = state.pockets.find(p=>p.id===modal.pocketId);
-        if(pocket){ pocket.name = name; pocket.note = note; if(modal.category) pocket.category = modal.category; }
+        if(pocket){ pocket.name = name; if(modal.category) pocket.category = modal.category; }
         closeModal(); showToast('已更新口袋');
         persist('am2:pockets', state.pockets);
       };
@@ -1497,15 +1562,15 @@
         if(fromId===toId){ showToast('轉出跟轉入不能是同一個口袋'); return; }
         if(!amount || amount<=0){ showToast('請輸入正確金額'); return; }
         if(!date){ showToast('請選擇日期'); return; }
-        const fromPocket = state.pockets.find(p=>p.id===fromId);
-        const toPocket = state.pockets.find(p=>p.id===toId);
-        if(!fromPocket || !toPocket){ showToast('請選擇口袋'); return; }
+        const fromAccount = fromId==='STOCK' ? STOCK_INVEST_ACCOUNT : (state.pockets.find(p=>p.id===fromId)||{}).account;
+        const toAccount = toId==='STOCK' ? STOCK_INVEST_ACCOUNT : (state.pockets.find(p=>p.id===toId)||{}).account;
+        if(!fromAccount || !toAccount){ showToast('請選擇口袋'); return; }
         const nowTime = new Date().toTimeString().slice(0,8);
         const dt = date+'T'+nowTime;
-        state.ledger.push({id:uid('lg'), type:'支出', datetime:dt, account:fromPocket.account, amount:-amount, cat1:'轉帳', cat2:'轉帳', note});
-        state.ledger.push({id:uid('lg'), type:'收入', datetime:dt, account:toPocket.account, amount:amount, cat1:'轉帳', cat2:'轉帳', note});
+        state.ledger.push({id:uid('lg'), type:'支出', datetime:dt, account:fromAccount, amount:-amount, cat1:'轉帳', cat2:'轉帳', note});
+        state.ledger.push({id:uid('lg'), type:'收入', datetime:dt, account:toAccount, amount:amount, cat1:'轉帳', cat2:'轉帳', note});
         if(fee>0){
-          state.ledger.push({id:uid('lg'), type:'支出', datetime:dt, account:fromPocket.account, amount:-fee, cat1:'手續費', cat2:'轉帳手續費', note});
+          state.ledger.push({id:uid('lg'), type:'支出', datetime:dt, account:fromAccount, amount:-fee, cat1:'手續費', cat2:'轉帳手續費', note});
         }
         closeModal(); showToast('已完成轉帳');
         persist('am2:ledger', state.ledger);
@@ -1513,13 +1578,30 @@
     }
     if(modal.type==='adjustPocket'){
       $('#am-save-adjust').onclick = ()=>{
-        const amount = parseFloat($('#am-adj-amount').value);
+        const targetBalance = parseFloat($('#am-adj-amount').value);
         const note = $('#am-adj-note').value.trim();
-        if(!amount){ showToast('請輸入金額'); return; }
+        if(targetBalance===undefined || targetBalance===null || isNaN(targetBalance)){ showToast('請輸入實際餘額'); return; }
+        const pocket = state.pockets.find(p=>p.id===modal.pocketId);
+        if(!pocket) return;
+        const currentBalance = pocketBalance(pocket);
+        const diff = targetBalance - currentBalance;
+        if(diff===0){ showToast('跟目前算出來的餘額一樣,不用調整'); closeModal(); return; }
+        pocket.manualAdjustments = pocket.manualAdjustments || [];
+        pocket.manualAdjustments.push({id:uid('adj'), date:new Date().toISOString().slice(0,10), amount:diff, note: note || ('校正為實際餘額 '+fmtMoney(targetBalance))});
+        closeModal(); showToast('已調整餘額');
+        persist('am2:pockets', state.pockets);
+      };
+    }
+    if(modal.type==='addInterest'){
+      $('#am-save-interest').onclick = ()=>{
+        const date = $('#am-int-date').value;
+        const amount = parseFloat($('#am-int-amount').value);
+        if(!date){ showToast('請選擇日期'); return; }
+        if(!amount || amount<=0){ showToast('請輸入正確的利息金額'); return; }
         const pocket = state.pockets.find(p=>p.id===modal.pocketId);
         pocket.manualAdjustments = pocket.manualAdjustments || [];
-        pocket.manualAdjustments.push({id:uid('adj'), date:new Date().toISOString().slice(0,10), amount, note});
-        closeModal(); showToast('已調整餘額');
+        pocket.manualAdjustments.push({id:uid('adj'), date, amount, note:'利息入帳', type:'interest'});
+        closeModal(); showToast('已記錄這筆利息');
         persist('am2:pockets', state.pockets);
       };
     }
@@ -1605,10 +1687,9 @@
     if(modal.type==='setGoal'){
       $('#am-save-goal').onclick = ()=>{
         const emergencyTarget = parseFloat($('#am-goal-emergency').value)||0;
-        const cashTarget = parseFloat($('#am-goal-cash').value)||0;
         const stockMonthlyTarget = parseFloat($('#am-goal-stock').value)||0;
         const deadline = $('#am-goal-date').value;
-        state.goal = {emergencyTarget, cashTarget, stockMonthlyTarget, deadline};
+        state.goal = {emergencyTarget, stockMonthlyTarget, deadline};
         closeModal(); showToast('已更新目標');
         persist('am:goal', state.goal);
       };
