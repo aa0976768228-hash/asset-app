@@ -87,7 +87,7 @@
   .am-net-breakdown{ font-size:12px; color:var(--ink-soft); margin-top:5px; }
   .am-net-breakdown b{ color:var(--ink); font-weight:700; }
   .am-goal-bignum{ font-size:22px; font-weight:800; margin:2px 0; }
-  .am-num-big{ font-size:18px; font-weight:800; }
+  .am-num-big{ font-size:16px; font-weight:800; }
   .am-privacy-btn{ border:1px solid var(--hairline); background:var(--paper-card); color:var(--ink-soft); font-size:12px; font-weight:700; border-radius:20px; padding:6px 12px; cursor:pointer; }
   .am-row-grid2{ display:grid; grid-template-columns: 1fr 1fr; gap:2px 14px; }
   .am-row-grid3{ display:grid; grid-template-columns: 46px 0.9fr 1.3fr; gap:0 12px; align-items:center; }
@@ -262,6 +262,7 @@
   let quickCatFilter = null;
   let assetSubTab = '收支';
   let shortfallPocketIds = new Set();
+  let shortfallStartTx = {}; // 口袋 id -> 造成餘額開始轉為警示狀態的那筆交易 id
   let editSections = new Set(); // 區塊層級的整批編輯模式:'pocket'、'budget'、'fixed'、'stock'、'goal'
   let toastTimer = null;
 
@@ -575,6 +576,19 @@
     const manual = (pocket.manualAdjustments||[]).reduce((s,a)=>s+a.amount,0);
     return (pocket.startingBalance||0) + pocketLedgerSum(pocket.account) + manual;
   }
+  function findShortfallStartTxId(pocket){
+    const txs = state.ledger.filter(l=>l.account===pocket.account).map(l=>({id:l.id, datetime:l.datetime, amount:l.amount}));
+    const manualTx = (pocket.manualAdjustments||[]).map(a=>({id:a.id, datetime:a.date+'T00:00:00', amount:a.amount}));
+    const combined = [...txs, ...manualTx].sort((a,b)=>a.datetime.localeCompare(b.datetime));
+    let running = pocket.startingBalance||0;
+    let crossingId = null;
+    combined.forEach(t=>{
+      running += t.amount;
+      if(running<0){ if(crossingId===null) crossingId = t.id; }
+      else { crossingId = null; }
+    });
+    return crossingId;
+  }
   function collectKnownCat1(){
     const set = new Set();
     state.quickItems.expense.forEach(q=>set.add(q.cat1));
@@ -686,6 +700,28 @@
     return total / months.length;
   }
 
+  function budgetAvgCycleSpend(budget){
+    const cycles = completedCycles().slice(-RATE_WINDOW_CYCLES);
+    if(cycles.length===0) return {avg:0, count:0};
+    const aliases = CATEGORY_ALIASES[budget.name] || [budget.name];
+    let total = 0;
+    cycles.forEach(cy=>{
+      const sum = state.ledger.filter(l=>{
+        if(l.type!=='支出') return false;
+        if(!aliases.includes(l.cat1)) return false;
+        const d = new Date(l.datetime);
+        return d>=cy.start && d<cy.end;
+      }).reduce((s,l)=>s+Math.abs(l.amount),0);
+      total += sum;
+    });
+    return {avg: total/cycles.length, count: cycles.length};
+  }
+  function budgetLastYearSpend(budget){
+    const aliases = CATEGORY_ALIASES[budget.name] || [budget.name];
+    const lastYear = String(new Date().getFullYear()-1);
+    return state.ledger.filter(l=> l.type==='支出' && aliases.includes(l.cat1) && l.datetime.slice(0,4)===lastYear).reduce((s,l)=>s+Math.abs(l.amount),0);
+  }
+
   function categorySpend(budget, prefix, prefixLen){
     const aliases = CATEGORY_ALIASES[budget.name] || [budget.name];
     return state.ledger.filter(l=>{
@@ -753,15 +789,10 @@
 
     let bodyHtml;
     if(txView.group==='detail'){
-      const warnedAccounts = new Set();
       bodyHtml = rows.length===0 ? '<div class="am-empty">這段期間沒有紀錄</div>' : rows.map(l=>{
         const pk = state.pockets.find(p=>p.account===l.account);
         const accountLabel = pk ? pk.name : l.account;
-        let isShort = false;
-        if(pk && shortfallPocketIds.has(pk.id) && !warnedAccounts.has(pk.id)){
-          isShort = true;
-          warnedAccounts.add(pk.id);
-        }
+        const isShort = pk && shortfallPocketIds.has(pk.id) && shortfallStartTx[pk.id]===l.id;
         return `
         <div class="am-row" style="display:grid; grid-template-columns:1.5fr 0.9fr 0.6fr; gap:8px; align-items:start;">
           <div>
@@ -771,6 +802,7 @@
           <div style="text-align:right;">
             <div class="am-row-amt ${l.type==='收入'?'inc':'exp'} am-num">${isShort?'⚠️ ':''}${escapeHtml(accountLabel)}</div>
             <div class="am-row-amt ${l.type==='收入'?'inc':'exp'} am-num">${l.type==='收入'?'+':'-'}${fmtRaw(l.amount)}</div>
+            ${isShort ? `<div class="am-row-sub" style="color:var(--rust);">餘額從這筆開始轉負</div>` : ''}
           </div>
           <div style="text-align:right;">
             <button class="am-adj-btn" data-edit-tx="${l.id}">編輯</button>
@@ -901,6 +933,8 @@
     const projections = state.pockets.map(p=>({pocket:p, proj:pocketProjection(p,cycle)}));
     const shortfalls = projections.filter(x=>x.proj.projected<0);
     shortfallPocketIds = new Set(shortfalls.map(x=>x.pocket.id));
+    shortfallStartTx = {};
+    shortfalls.forEach(x=>{ shortfallStartTx[x.pocket.id] = findShortfallStartTxId(x.pocket); });
 
     const totalCash = state.pockets.reduce((s,p)=>s+pocketBalance(p),0);
     const currentCashOnly = projections.filter(x=>(x.pocket.category||'cash')==='cash').reduce((s,x)=>s+x.proj.balance,0);
@@ -1197,6 +1231,18 @@
                     <div class="am-num-big am-num">${fmtMoney(spent)} <span style="font-size:var(--font-sm); font-weight:600; color:var(--ink-soft);">/ ${fmtMoney(displayAmount)}</span></div>
                     <div class="am-row-sub" style="margin-top:4px;">${over?'超支':'剩餘'}</div>
                     <div class="am-num-big am-num" style="color:${over?'var(--rust)':'var(--green)'}">${fmtMoney(over?(spent-displayAmount):(displayAmount-spent))}</div>
+                    ${(()=>{
+                      if(budgetView.mode==='year'){
+                        const lastYearSpend = budgetLastYearSpend(b);
+                        const diff = lastYearSpend - displayAmount;
+                        return `<div class="am-row-sub" style="margin-top:6px;">去年花費 ${fmtMoney(lastYearSpend)}・${diff>0?('比預算需增加 '+fmtMoney(diff)):('比預算剩餘 '+fmtMoney(-diff))}</div>`;
+                      } else {
+                        const {avg, count} = budgetAvgCycleSpend(b);
+                        if(count===0) return `<div class="am-row-sub" style="margin-top:6px;">還沒有足夠的發薪週期資料可以比較</div>`;
+                        const diff = avg - b.amount;
+                        return `<div class="am-row-sub" style="margin-top:6px;">近${count}期平均花費 ${fmtMoney(avg)}・${diff>0?('比預算需增加 '+fmtMoney(diff)):('比預算剩餘 '+fmtMoney(-diff))}</div>`;
+                      }
+                    })()}
                   </div>
                   ${editSections.has('budget') ? `<div style="padding-left:58px; margin-top:8px;"><button class="am-row-del" data-del-budget="${b.id}" title="刪除">刪除</button></div>` : ''}
                 </div>`;
