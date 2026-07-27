@@ -78,6 +78,10 @@
   .am-net-breakdown{ font-size:12px; color:var(--ink-soft); margin-top:5px; }
   .am-net-breakdown b{ color:var(--ink); font-weight:700; }
   .am-goal-bignum{ font-size:22px; font-weight:800; margin:2px 0; }
+  .am-row-grid2{ display:grid; grid-template-columns: 1fr 1fr; gap:2px 14px; }
+  .am-row-grid3{ display:grid; grid-template-columns: 46px 1fr 1fr; gap:0 12px; align-items:center; }
+  .am-mini-ring{ position:relative; width:44px; height:44px; flex-shrink:0; }
+  .am-mini-ring-pct{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:800; font-family:'Manrope',sans-serif; color:var(--ink); }
   .am-split-bar{ height:8px; border-radius:6px; overflow:hidden; display:flex; margin-top:10px; background:var(--hairline); }
   .am-net-goal-text b{ color:var(--gold); font-weight:700; }
   .am-ring-wrap{ position:relative; width:92px; height:92px; flex-shrink:0; cursor:pointer; }
@@ -713,14 +717,17 @@
         const pk = state.pockets.find(p=>p.account===l.account);
         const accountLabel = pk ? pk.name : l.account;
         return `
-        <div class="am-row">
-          <div class="am-row-main">
+        <div class="am-row" style="display:grid; grid-template-columns:1.3fr 0.8fr 1.1fr; gap:8px; align-items:center;">
+          <div>
             <div class="am-row-name">${escapeHtml(l.cat1)}${l.cat2?('・'+escapeHtml(l.cat2)):''}</div>
             <div class="am-row-sub">${l.datetime.slice(0,10)} ${l.datetime.slice(11,16)}</div>
-            <div class="am-row-sub">${escapeHtml(accountLabel)}${l.note?(' / '+escapeHtml(l.note)):''}</div>
+            <div class="am-row-sub">${escapeHtml(accountLabel)}</div>
           </div>
           <div class="am-row-amt ${l.type==='收入'?'inc':'exp'} am-num">${l.type==='收入'?'+':'-'}${Math.abs(l.amount).toLocaleString('zh-Hant-TW')}</div>
-          <button class="am-adj-btn" data-edit-tx="${l.id}" style="margin-left:6px;">編輯</button>
+          <div style="text-align:right;">
+            <div class="am-row-sub" style="word-break:break-word;">${l.note?escapeHtml(l.note):'—'}</div>
+            <button class="am-adj-btn" data-edit-tx="${l.id}" style="margin-top:4px;">編輯</button>
+          </div>
         </div>`;
       }).join('');
     } else {
@@ -768,6 +775,17 @@
         <div class="am-hint" style="margin-top:0;">這段期間收入 <b style="color:var(--green)">${fmtMoney(totalIncome)}</b>・支出 <b style="color:var(--rust)">${fmtMoney(totalExpense)}</b>(帳戶間轉帳不算在內,轉帳手續費仍算支出)</div>
         <div class="am-list">${bodyHtml}</div>
       </div>`;
+  }
+
+  function ringSvg(pct, size, strokeColor, trackColor){
+    const clamped = Math.min(Math.max(pct,0),1);
+    const stroke = Math.max(Math.round(size*0.13),5);
+    const r = (size-stroke)/2, c = 2*Math.PI*r;
+    return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${trackColor}" stroke-width="${stroke}"/>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${strokeColor}" stroke-width="${stroke}" stroke-linecap="round"
+        stroke-dasharray="${c}" stroke-dashoffset="${c*(1-clamped)}" transform="rotate(-90 ${size/2} ${size/2})"/>
+    </svg>`;
   }
 
   function renderPocketRow(pocket, proj, showInterestBtn){
@@ -1003,14 +1021,23 @@
                 const profit = (latest.marketValue||0)-(latest.cost||0);
                 const rate = latest.cost>0 ? (profit/latest.cost*100) : 0;
                 const monthlyRate = stockMonthlyReturnRate(st);
+                const totalDividend = (st.dividends||[]).reduce((s,d)=>s+d.amount,0);
                 return `
-                <div class="am-row">
+                <div class="am-row" style="align-items:flex-start;">
                   <div class="am-row-main">
                     <div class="am-row-name">${escapeHtml(st.name)}</div>
-                    <div class="am-row-sub">${latest.shares||0} 股・成本 ${fmtMoney(latest.cost||0)}</div>
-                    <div class="am-row-sub">損益 <span style="color:${profit>=0?'var(--green)':'var(--rust)'}">${fmtMoney(profit)}(${rate.toFixed(1)}%)</span></div>
-                    ${monthlyRate!==null?`<div class="am-row-sub">平均每月報酬率 ${monthlyRate.toFixed(2)}%</div>`:''}
-                    <div class="am-row-sub">最新紀錄日期:${latest.date||'-'} <span class="am-detail-link" data-add-stock-entry="${st.id}">更新紀錄</span></div>
+                    <div class="am-row-grid2" style="margin-top:4px;">
+                      <div class="am-row-sub">股數 ${latest.shares||0}</div>
+                      <div class="am-row-sub">成本 ${fmtMoney(latest.cost||0)}</div>
+                      <div class="am-row-sub">損益 <span style="color:${profit>=0?'var(--green)':'var(--rust)'}">${fmtMoney(profit)}(${rate.toFixed(1)}%)</span></div>
+                      <div class="am-row-sub">${monthlyRate!==null?('月報酬率 '+monthlyRate.toFixed(2)+'%'):'尚無月報酬率'}</div>
+                      <div class="am-row-sub">股利累計 <span style="color:var(--green)">${fmtMoney(totalDividend)}</span></div>
+                      <div class="am-row-sub">最新 ${latest.date||'-'}</div>
+                    </div>
+                    <div style="margin-top:5px; display:flex; gap:12px;">
+                      <span class="am-detail-link" data-add-stock-entry="${st.id}">更新市值</span>
+                      <span class="am-detail-link" data-add-dividend="${st.id}">+ 記一筆股利</span>
+                    </div>
                   </div>
                   <div class="am-row-amt am-num">${fmtMoney(latest.marketValue||0)}</div>
                   <button class="am-row-del" data-del-stock="${st.id}" title="刪除">✕</button>
@@ -1070,19 +1097,23 @@
                 const spent = budgetSpentForView(b);
                 const months = budgetView.mode==='year' ? (budgetView.useActualMonths ? cachedActualMonths : 12) : 1;
                 const displayAmount = b.amount * months;
-                const pct = displayAmount>0 ? Math.min(spent/displayAmount*100,100) : 0;
+                const pct = displayAmount>0 ? Math.min(spent/displayAmount,1) : 0;
+                const pctDisplay = displayAmount>0 ? Math.round(spent/displayAmount*100) : 0;
                 const over = spent>displayAmount;
                 return `
-                <div class="am-row" style="flex-direction:column; align-items:stretch;">
-                  <div style="display:flex; align-items:center; gap:10px;">
-                    <div class="am-row-main">
-                      <div class="am-row-name">${escapeHtml(b.name)}</div>
-                      <div class="am-row-sub">${pocket?escapeHtml(pocket.name):'未指派口袋'}</div>
-                      <div class="am-row-sub">已花 ${fmtMoney(spent)} / ${fmtMoney(displayAmount)}・${over?('<span class="am-pocket-shortfall">超支 '+fmtMoney(spent-displayAmount)+'</span>'):('<span class="am-pocket-ok">剩餘 '+fmtMoney(displayAmount-spent)+'</span>')}</div>
-                    </div>
-                    <button class="am-row-del" data-del-budget="${b.id}" title="刪除">✕</button>
+                <div class="am-row-grid3" style="padding:11px 0; border-bottom:1px solid var(--hairline);">
+                  <div class="am-mini-ring">${ringSvg(pct,44,over?'var(--rust)':'var(--green)','var(--hairline)')}
+                    <div class="am-mini-ring-pct">${pctDisplay}%</div>
                   </div>
-                  <div class="am-progress-bar"><div class="am-progress-fill" style="width:${pct}%; background:${over?'var(--rust)':'var(--green)'}"></div></div>
+                  <div>
+                    <div class="am-row-name">${escapeHtml(b.name)}</div>
+                    <div class="am-row-sub">${pocket?escapeHtml(pocket.name):'未指派口袋'}</div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div class="am-row-sub">已花 ${fmtMoney(spent)} / ${fmtMoney(displayAmount)}</div>
+                    <div class="am-row-sub">${over?('<span class="am-pocket-shortfall">超支 '+fmtMoney(spent-displayAmount)+'</span>'):('<span class="am-pocket-ok">剩餘 '+fmtMoney(displayAmount-spent)+'</span>')}</div>
+                    <button class="am-row-del" data-del-budget="${b.id}" title="刪除" style="margin-top:2px;">✕</button>
+                  </div>
                 </div>`;
               }); })().join('')}
           </div>
@@ -1341,6 +1372,18 @@
       </div></div>`;
     }
 
+    if(modal.type==='addDividend'){
+      const st = state.stocks.find(s=>s.id===modal.stockId);
+      return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">「${escapeHtml(st?st.name:'')}」記一筆股利</div>
+        <div class="am-hint">單純記錄領到的股利金額,累計起來就能看出你的報酬裡有多少是股利貢獻的</div>
+        <div class="am-field"><label>日期</label><input type="date" id="am-dv-date" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div class="am-field"><label>股利金額</label><input type="number" inputmode="decimal" id="am-dv-amount" placeholder="0"></div>
+        <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-dividend">儲存</button></div>
+      </div></div>`;
+    }
+
     if(modal.type==='addFixed') return `
       <div class="am-overlay" id="am-overlay"><div class="am-sheet">
         <div class="am-sheet-title">新增固定支出</div>
@@ -1469,6 +1512,7 @@
 
     const addStockBtn = $('#am-add-stock'); if(addStockBtn) addStockBtn.onclick = ()=> openModal({type:'addStock'});
     root.querySelectorAll('[data-add-stock-entry]').forEach(b=> b.onclick = ()=> openModal({type:'addStockEntry', stockId:b.dataset.addStockEntry}));
+    root.querySelectorAll('[data-add-dividend]').forEach(b=> b.onclick = ()=> openModal({type:'addDividend', stockId:b.dataset.addDividend}));
     root.querySelectorAll('[data-del-stock]').forEach(b=> b.onclick = ()=> openModal({type:'confirmDel', kind:'stock', id:b.dataset.delStock, label:'這筆持股'}));
 
     const addFixedBtn = $('#am-add-fixed'); if(addFixedBtn) addFixedBtn.onclick = ()=> openModal({type:'addFixed'});
@@ -1697,6 +1741,20 @@
         st.entries = st.entries.filter(e=>e.date!==date); // 同一天重複更新就覆蓋掉
         st.entries.push({id:uid('se'), date, shares, cost, marketValue});
         closeModal(); showToast('已更新這筆股票紀錄');
+        persist('am2:stocks', state.stocks);
+      };
+    }
+    if(modal.type==='addDividend'){
+      $('#am-save-dividend').onclick = ()=>{
+        const st = state.stocks.find(s=>s.id===modal.stockId);
+        if(!st) return;
+        const date = $('#am-dv-date').value;
+        const amount = parseFloat($('#am-dv-amount').value);
+        if(!date){ showToast('請選擇日期'); return; }
+        if(!amount || amount<=0){ showToast('請輸入正確的股利金額'); return; }
+        st.dividends = st.dividends || [];
+        st.dividends.push({id:uid('dv'), date, amount});
+        closeModal(); showToast('已記錄這筆股利');
         persist('am2:stocks', state.stocks);
       };
     }
