@@ -13,19 +13,23 @@
   @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
 
   :root{
-    --ink:#20281f;
-    --ink-soft:#5b6155;
-    --paper:#FAF6EC;
-    --paper-card:#FFFDF7;
-    --hairline:#E3DAC2;
-    --green:#1B6E52;
-    --green-soft:#DCEDE4;
-    --rust:#B65C38;
-    --rust-soft:#F3E3D8;
-    --gold:#C89B3C;
-    --gold-soft:#F4EAD1;
+    --ink:#222222;
+    --ink-soft:#5a6472;
+    --paper:#F4F7FA;
+    --paper-card:#FFFFFF;
+    --hairline:#E1E6ED;
+    --navy:#0c3866;
+    --navy-soft:#DCE6F0;
+    --green:#49c0b6;
+    --green-soft:#DEF5F3;
+    --rust:#ce181e;
+    --rust-soft:#FBDCDD;
+    --gold:#ffc20e;
+    --gold-soft:#FFF3D1;
+    --blue:#007cc0;
+    --blue-soft:#DCEEF9;
     --radius:16px;
-    --shadow: 0 1px 2px rgba(32,40,31,0.04), 0 6px 20px rgba(32,40,31,0.06);
+    --shadow: 0 1px 2px rgba(12,56,102,0.06), 0 6px 20px rgba(12,56,102,0.08);
   }
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; background:var(--paper); }
@@ -39,7 +43,7 @@
 
   .am-header{
     position:sticky; top:0; z-index:20;
-    background:rgba(250,246,236,0.98);
+    background:rgba(244,247,250,0.96);
     border-bottom:1px solid var(--hairline); padding:14px 18px 12px;
   }
   .am-header-top{ display:flex; align-items:center; justify-content:space-between; }
@@ -51,7 +55,7 @@
   .am-body{ padding:16px 16px 8px; }
   .am-subtab-bar{ display:flex; gap:6px; margin-bottom:14px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
   .am-subtab-btn{ flex:1 0 auto; white-space:nowrap; text-align:center; padding:10px 12px; border-radius:10px; border:1px solid var(--hairline); background:var(--paper-card); font-size:12.5px; font-weight:700; color:var(--ink-soft); cursor:pointer; }
-  .am-subtab-btn.sel{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+  .am-subtab-btn.sel{ background:var(--navy); color:#fff; border-color:var(--navy); }
   .am-card{
     background:var(--paper-card); border-radius:var(--radius); box-shadow:var(--shadow);
     border:1px solid var(--hairline); padding:18px; margin-bottom:16px;
@@ -78,6 +82,7 @@
   .am-net-breakdown{ font-size:12px; color:var(--ink-soft); margin-top:5px; }
   .am-net-breakdown b{ color:var(--ink); font-weight:700; }
   .am-goal-bignum{ font-size:22px; font-weight:800; margin:2px 0; }
+  .am-privacy-btn{ border:1px solid var(--hairline); background:var(--paper-card); color:var(--ink-soft); font-size:12px; font-weight:700; border-radius:20px; padding:6px 12px; cursor:pointer; }
   .am-row-grid2{ display:grid; grid-template-columns: 1fr 1fr; gap:2px 14px; }
   .am-row-grid3{ display:grid; grid-template-columns: 46px 1fr 1fr; gap:0 12px; align-items:center; }
   .am-mini-ring{ position:relative; width:44px; height:44px; flex-shrink:0; }
@@ -105,7 +110,7 @@
   .am-pocket-shortfall{ color:var(--rust); }
   .am-pocket-ok{ color:var(--green); }
   .am-adj-btn{ border:1px solid var(--hairline); background:#fff; color:var(--ink-soft); font-size:12px; font-weight:700; border-radius:8px; padding:3px 8px; cursor:pointer; }
-  .am-detail-link{ text-decoration:underline; cursor:pointer; color:var(--ink-soft); font-size:11px; }
+  .am-detail-link{ text-decoration:underline; cursor:pointer; color:var(--blue); font-size:11px; font-weight:600; }
 
   .am-progress-bar{ height:7px; border-radius:5px; background:var(--hairline); overflow:hidden; margin-top:6px; }
   .am-progress-fill{ height:100%; border-radius:5px; }
@@ -134,7 +139,7 @@
 
   .am-quick-tabs{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
   .am-quick-tab{ padding:6px 12px; border-radius:8px; border:1px solid var(--hairline); background:#fff; font-size:12.5px; font-weight:700; color:var(--ink-soft); cursor:pointer; }
-  .am-quick-tab.sel{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+  .am-quick-tab.sel{ background:var(--navy); color:#fff; border-color:var(--navy); }
   .am-quick-tab.inc.sel{ background:var(--green); border-color:var(--green); }
   .am-quick-grid{ display:flex; flex-wrap:wrap; gap:8px; }
   .am-quick-chip{ padding:9px 14px; border-radius:20px; font-size:13.5px; font-weight:700; border:1.5px solid; background:#fff; cursor:pointer; }
@@ -143,7 +148,7 @@
   .am-quick-manage-row{ display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--hairline); }
 
   .am-tabbar{ position:fixed; left:0; right:0; bottom:0; z-index:30; max-width:480px; margin:0 auto; display:flex; justify-content:space-around; align-items:flex-end; padding:0 10px 10px; pointer-events:none; }
-  .am-tabbar-bg{ position:fixed; left:0; right:0; bottom:0; z-index:29; max-width:480px; margin:0 auto; height:74px; background:rgba(250,246,236,0.98); border-top:1px solid var(--hairline); }
+  .am-tabbar-bg{ position:fixed; left:0; right:0; bottom:0; z-index:29; max-width:480px; margin:0 auto; height:74px; background:rgba(244,247,250,0.96); border-top:1px solid var(--hairline); }
   .am-tab{ pointer-events:auto; flex:1; max-width:100px; display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 4px 8px; border-radius:12px 12px 6px 6px; background:var(--paper-card); border:1px solid var(--hairline); border-bottom:none; cursor:pointer; transform:translateY(6px); transition:transform .15s ease; }
   .am-tab.active{ transform:translateY(-2px); box-shadow:var(--shadow); }
   .am-tab-icon{ font-size:18px; line-height:1; }
@@ -151,7 +156,7 @@
   .am-tab.active .am-tab-label{ color:var(--ink); }
   .am-tab.disabled{ opacity:0.55; }
 
-  .am-overlay{ position:fixed; inset:0; background:rgba(32,26,15,0.35); z-index:50; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .am-overlay{ position:fixed; inset:0; background:rgba(12,56,102,0.35); z-index:50; display:flex; align-items:center; justify-content:center; padding:20px; }
   .am-sheet{ background:var(--paper-card); width:100%; max-width:440px; border-radius:20px; padding:22px 20px; max-height:82vh; overflow-y:auto; box-shadow: 0 10px 40px rgba(0,0,0,0.25); }
   .am-sheet-title{ font-family:'Manrope',sans-serif; font-size:18px; font-weight:700; margin-bottom:16px; }
   .am-field{ margin-bottom:14px; }
@@ -255,7 +260,15 @@
   function uid(p){ return p+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
   function pad(n){ return String(n).padStart(2,'0'); }
   function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-  function fmtMoney(n){ const sign = n<0?'-':''; return sign+'NT$ '+Math.abs(Math.round(n)).toLocaleString('zh-Hant-TW'); }
+  let privacyMode = false;
+  function fmtMoney(n){
+    if(privacyMode) return 'NT$ ****';
+    const sign = n<0?'-':''; return sign+'NT$ '+Math.abs(Math.round(n)).toLocaleString('zh-Hant-TW');
+  }
+  function fmtRaw(n){
+    if(privacyMode) return '****';
+    return Math.abs(Math.round(n)).toLocaleString('zh-Hant-TW');
+  }
 
   // ---------- Supabase 連線設定 ----------
   const SUPABASE_URL = 'https://iegnqoeoquosyegaccbi.supabase.co';
@@ -342,10 +355,10 @@
     cloudState = await loadCloudState();
     cloudLoaded = true;
     if(cloudState===null && supabaseConnectionError){
-      root.innerHTML = '<div style="padding:32px 20px;font-family:sans-serif;color:#3a2f1f;background:#FAF6EC;min-height:100vh;">'
+      root.innerHTML = '<div style="padding:32px 20px;font-family:sans-serif;color:#222222;background:#F4F7FA;min-height:100vh;">'
         + '<div style="font-weight:700;margin-bottom:8px;font-size:16px;">連不到你的 Supabase 資料庫</div>'
-        + '<div style="font-size:13px;color:#5b6155;line-height:1.7;">請確認:<br>1. 已經在 SQL Editor 執行過建表指令(app_data 這張表)<br>2. 網址跟 anon key 是不是複製對了<br>3. 手機網路是否正常</div>'
-        + '<div style="margin-top:10px;font-size:11px;background:#fff;border:1px solid #E3DAC2;border-radius:8px;padding:10px;word-break:break-all;">'
+        + '<div style="font-size:13px;color:#5a6472;line-height:1.7;">請確認:<br>1. 已經在 SQL Editor 執行過建表指令(app_data 這張表)<br>2. 網址跟 anon key 是不是複製對了<br>3. 手機網路是否正常</div>'
+        + '<div style="margin-top:10px;font-size:11px;background:#fff;border:1px solid #E1E6ED;border-radius:8px;padding:10px;word-break:break-all;">'
         + String(supabaseConnectionError).replace(/</g,'&lt;') + '</div></div>';
       return;
     }
@@ -723,7 +736,7 @@
             <div class="am-row-sub">${l.datetime.slice(0,10)} ${l.datetime.slice(11,16)}</div>
             <div class="am-row-sub">${escapeHtml(accountLabel)}</div>
           </div>
-          <div class="am-row-amt ${l.type==='收入'?'inc':'exp'} am-num">${l.type==='收入'?'+':'-'}${Math.abs(l.amount).toLocaleString('zh-Hant-TW')}</div>
+          <div class="am-row-amt ${l.type==='收入'?'inc':'exp'} am-num">${l.type==='收入'?'+':'-'}${fmtRaw(l.amount)}</div>
           <div style="text-align:right;">
             <div class="am-row-sub" style="word-break:break-word;">${l.note?escapeHtml(l.note):'—'}</div>
             <button class="am-adj-btn" data-edit-tx="${l.id}" style="margin-top:4px;">編輯</button>
@@ -747,7 +760,7 @@
               <div class="am-row-name">${escapeHtml(g.cat1)}</div>
               <div class="am-row-sub">${g.count} 筆・點看明細</div>
             </div>
-            <div class="am-row-amt ${g.type==='收入'?'inc':'exp'} am-num">${g.type==='收入'?'+':'-'}${g.total.toLocaleString('zh-Hant-TW')}</div>
+            <div class="am-row-amt ${g.type==='收入'?'inc':'exp'} am-num">${g.type==='收入'?'+':'-'}${fmtRaw(g.total)}</div>
           </div>
           <div class="am-progress-bar"><div class="am-progress-fill" style="width:${maxTotal>0?(g.total/maxTotal*100):0}%; background:${g.type==='收入'?'var(--green)':'var(--rust)'}"></div></div>
         </div>`).join('');
@@ -812,10 +825,10 @@
     try{ renderInner(); }
     catch(e){
       console.error('render error', e);
-      root.innerHTML = '<div style="padding:32px 20px;font-family:sans-serif;color:#3a2f1f;background:#FAF6EC;min-height:100vh;">'
+      root.innerHTML = '<div style="padding:32px 20px;font-family:sans-serif;color:#222222;background:#F4F7FA;min-height:100vh;">'
         + '<div style="font-weight:700;margin-bottom:8px;font-size:16px;">畫面出了一點問題</div>'
-        + '<div style="font-size:13px;color:#5b6155;line-height:1.6;">重新整理一次通常就會恢復。如果一直發生,麻煩把下面這行錯誤訊息回報給我:</div>'
-        + '<div style="margin-top:10px;font-size:11px;background:#fff;border:1px solid #E3DAC2;border-radius:8px;padding:10px;word-break:break-all;">'
+        + '<div style="font-size:13px;color:#5a6472;line-height:1.6;">重新整理一次通常就會恢復。如果一直發生,麻煩把下面這行錯誤訊息回報給我:</div>'
+        + '<div style="margin-top:10px;font-size:11px;background:#fff;border:1px solid #E1E6ED;border-radius:8px;padding:10px;word-break:break-all;">'
         + String(e && e.message ? e.message : e).replace(/</g,'&lt;') + '</div></div>';
     }
   }
@@ -978,7 +991,10 @@
 
         ${assetSubTab==='資產' ? `
         <div class="am-card">
-          <div class="am-net-eyebrow">總資產淨值(現金口袋+股票)</div>
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <div class="am-net-eyebrow">總資產淨值(現金口袋+股票)</div>
+            <button class="am-privacy-btn" id="am-toggle-privacy">${privacyMode?'👁️ 顯示':'🙈 隱藏'}</button>
+          </div>
           <div class="am-net-value am-num">${fmtMoney(totalAssets)}</div>
           <div class="am-net-breakdown">現金口袋 <b class="am-num">${fmtMoney(totalCash)}</b>(${totalAssets>0?Math.round(totalCash/totalAssets*100):0}%)・股票 <b class="am-num">${fmtMoney(totalStock)}</b>(${totalAssets>0?Math.round(totalStock/totalAssets*100):0}%)</div>
           <div class="am-split-bar">
@@ -1470,6 +1486,7 @@
     const $ = sel=>root.querySelector(sel);
 
     $('#am-open-payday').onclick = ()=> openModal({type:'setPayday'});
+    const privacyBtn = $('#am-toggle-privacy'); if(privacyBtn) privacyBtn.onclick = ()=>{ privacyMode = !privacyMode; render(); };
 
     const manageQuickBtn = $('#am-manage-quick'); if(manageQuickBtn) manageQuickBtn.onclick = ()=> openModal({type:'manageQuick', newType:'expense'});
     root.querySelectorAll('[data-quick-cat]').forEach(b=>{
@@ -1847,10 +1864,10 @@
 
   loadAll().catch(e=>{
     console.error('loadAll fatal error', e);
-    root.innerHTML = '<div style="padding:32px 20px;font-family:sans-serif;color:#3a2f1f;background:#FAF6EC;min-height:100vh;">'
+    root.innerHTML = '<div style="padding:32px 20px;font-family:sans-serif;color:#222222;background:#F4F7FA;min-height:100vh;">'
       + '<div style="font-weight:700;margin-bottom:8px;font-size:16px;">載入時發生錯誤</div>'
-      + '<div style="font-size:13px;color:#5b6155;line-height:1.6;">重新整理一次通常就會恢復。如果一直發生,麻煩把下面這行錯誤訊息回報給我:</div>'
-      + '<div style="margin-top:10px;font-size:11px;background:#fff;border:1px solid #E3DAC2;border-radius:8px;padding:10px;word-break:break-all;">'
+      + '<div style="font-size:13px;color:#5a6472;line-height:1.6;">重新整理一次通常就會恢復。如果一直發生,麻煩把下面這行錯誤訊息回報給我:</div>'
+      + '<div style="margin-top:10px;font-size:11px;background:#fff;border:1px solid #E1E6ED;border-radius:8px;padding:10px;word-break:break-all;">'
       + String(e && e.message ? e.message : e).replace(/</g,'&lt;') + '</div></div>';
   });
 })();
