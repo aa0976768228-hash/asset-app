@@ -151,6 +151,11 @@
   .am-quick-chip{ padding:9px 14px; border-radius:20px; font-size:13.5px; font-weight:700; border:1.5px solid; background:#fff; cursor:pointer; }
   .am-cat-grid{ display:flex; flex-wrap:wrap; gap:8px; }
   .am-cat-chip{ padding:7px 12px; border-radius:20px; font-size:13px; font-weight:600; cursor:pointer; border:1.5px solid var(--hairline); }
+  .am-cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-top:8px; }
+  .am-cal-weekdays{ text-align:center; font-size:11px; color:var(--ink-soft); font-weight:700; margin-top:0; }
+  .am-cal-cell{ position:relative; aspect-ratio:1; border-radius:8px; border:1px solid var(--hairline); display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; font-size:12px; background:#fff; }
+  .am-cal-cell.today{ border-color:var(--navy); border-width:2px; font-weight:800; }
+  .am-cal-dot{ position:absolute; bottom:3px; background:var(--rust); color:#fff; font-size:9px; font-weight:800; border-radius:50%; width:14px; height:14px; display:flex; align-items:center; justify-content:center; }
   .am-quick-chip.exp{ color:var(--rust); border-color:var(--rust-soft); }
   .am-quick-chip.inc{ color:var(--green); border-color:var(--green-soft); }
   .am-quick-manage-row{ display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--hairline); }
@@ -276,6 +281,7 @@
   let currentPage = 'asset'; // 'asset' | 'work'
   let workSubTab = '工作項目';
   let workStatusFilter = '全部';
+  let workCalendarYM = null;
   let workCalendarMonth = null;
   let toastTimer = null;
 
@@ -1114,6 +1120,8 @@
 
         <div class="am-subtab-bar">
           <button class="am-subtab-btn ${workSubTab==='工作項目'?'sel':''}" data-work-subtab="工作項目">工作項目</button>
+          <button class="am-subtab-btn ${workSubTab==='統計'?'sel':''}" data-work-subtab="統計">統計</button>
+          <button class="am-subtab-btn ${workSubTab==='日曆'?'sel':''}" data-work-subtab="日曆">日曆</button>
           <button class="am-subtab-btn ${workSubTab==='集點表'?'sel':''}" data-work-subtab="集點表">🔥離職集點表</button>
           <button class="am-subtab-btn ${workSubTab==='基本資料'?'sel':''}" data-work-subtab="基本資料">基本資料</button>
         </div>
@@ -1162,6 +1170,102 @@
                 </div>`).join('')}
           </div>
         </div>
+        ` : ''}
+
+        ${workSubTab==='統計' ? `
+        ${(()=>{
+          const now = new Date();
+          const thisMonth = now.getFullYear()+'-'+pad(now.getMonth()+1);
+          const thisYear = String(now.getFullYear());
+          const completedThisMonth = items.filter(w=>w.status==='已完成' && w.endDate && w.endDate.slice(0,7)===thisMonth).length;
+          const addedThisMonth = items.filter(w=>w.startDate && w.startDate.slice(0,7)===thisMonth).length;
+          const completedThisYear = items.filter(w=>w.status==='已完成' && w.endDate && w.endDate.slice(0,4)===thisYear).length;
+          const addedThisYear = items.filter(w=>w.startDate && w.startDate.slice(0,4)===thisYear).length;
+          const catCounts = {};
+          items.forEach(w=>{ const c = w.category||'未分類'; catCounts[c] = (catCounts[c]||0)+1; });
+          const catRanked = Object.entries(catCounts).sort((a,b)=>b[1]-a[1]);
+          const maxCatCount = catRanked.length ? catRanked[0][1] : 0;
+          return `
+          <div class="am-card">
+            <div class="am-section-title">總覽</div>
+            <div class="am-row-grid2">
+              <div class="am-row-sub">項目總數</div>
+              <div class="am-row-sub">分類總數</div>
+              <div class="am-goal-bignum am-num">${items.length}</div>
+              <div class="am-goal-bignum am-num">${(state.workCategories||[]).length}</div>
+            </div>
+          </div>
+          <div class="am-card">
+            <div class="am-section-title">本月</div>
+            <div class="am-row-grid2">
+              <div class="am-row-sub">完成</div>
+              <div class="am-row-sub">新增</div>
+              <div class="am-goal-bignum am-num" style="color:var(--green);">${completedThisMonth}</div>
+              <div class="am-goal-bignum am-num" style="color:var(--navy);">${addedThisMonth}</div>
+            </div>
+          </div>
+          <div class="am-card">
+            <div class="am-section-title">今年</div>
+            <div class="am-row-grid2">
+              <div class="am-row-sub">完成</div>
+              <div class="am-row-sub">新增</div>
+              <div class="am-goal-bignum am-num" style="color:var(--green);">${completedThisYear}</div>
+              <div class="am-goal-bignum am-num" style="color:var(--navy);">${addedThisYear}</div>
+            </div>
+          </div>
+          <div class="am-card">
+            <div class="am-section-title">各分類項目數</div>
+            <div class="am-list">
+              ${catRanked.map(([c,n])=>`
+                <div class="am-row" style="flex-direction:column; align-items:stretch;">
+                  <div style="display:flex; justify-content:space-between;">
+                    <div class="am-row-name">${escapeHtml(c)}</div>
+                    <div class="am-row-amt am-num">${n}</div>
+                  </div>
+                  <div class="am-progress-bar"><div class="am-progress-fill" style="width:${maxCatCount>0?(n/maxCatCount*100):0}%; background:var(--navy)"></div></div>
+                </div>`).join('')}
+            </div>
+          </div>`;
+        })()}
+        ` : ''}
+
+        ${workSubTab==='日曆' ? `
+        ${(()=>{
+          if(!workCalendarYM) workCalendarYM = new Date().getFullYear()+'-'+pad(new Date().getMonth()+1);
+          const [cy, cm] = workCalendarYM.split('-').map(Number);
+          const firstDay = new Date(cy, cm-1, 1);
+          const daysInMonth = new Date(cy, cm, 0).getDate();
+          const startWeekday = firstDay.getDay();
+          const itemsByDate = {};
+          items.forEach(w=>{ if(w.startDate){ (itemsByDate[w.startDate] = itemsByDate[w.startDate]||[]).push(w); } });
+          let cells = '';
+          for(let i=0;i<startWeekday;i++){ cells += '<div></div>'; }
+          for(let d=1; d<=daysInMonth; d++){
+            const dateStr = cy+'-'+pad(cm)+'-'+pad(d);
+            const dayItems = itemsByDate[dateStr]||[];
+            const isToday = dateStr === new Date().toISOString().slice(0,10);
+            cells += `
+              <div class="am-cal-cell ${isToday?'today':''}" data-cal-day="${dateStr}">
+                <div class="am-cal-daynum">${d}</div>
+                ${dayItems.length>0?`<div class="am-cal-dot">${dayItems.length}</div>`:''}
+              </div>`;
+          }
+          return `
+          <div class="am-card">
+            <div class="am-budget-view-bar">
+              <div class="am-row-name">${cy}年${cm}月</div>
+              <div class="am-period-nav">
+                <button id="am-cal-prev">‹</button>
+                <button id="am-cal-next">›</button>
+              </div>
+            </div>
+            <div class="am-cal-grid am-cal-weekdays">
+              <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+            </div>
+            <div class="am-cal-grid">${cells}</div>
+            <div class="am-hint">點日期可以新增當天的工作 to-do</div>
+          </div>`;
+        })()}
         ` : ''}
 
         ${workSubTab==='集點表' ? `
@@ -2093,6 +2197,21 @@
     });
     root.querySelectorAll('[data-work-status-filter]').forEach(b=>{
       b.onclick = ()=>{ workStatusFilter = b.dataset.workStatusFilter; render(); };
+    });
+    const calPrev = $('#am-cal-prev'); if(calPrev) calPrev.onclick = ()=>{
+      const [y,m] = workCalendarYM.split('-').map(Number);
+      const d = new Date(y, m-2, 1);
+      workCalendarYM = d.getFullYear()+'-'+pad(d.getMonth()+1);
+      render();
+    };
+    const calNext = $('#am-cal-next'); if(calNext) calNext.onclick = ()=>{
+      const [y,m] = workCalendarYM.split('-').map(Number);
+      const d = new Date(y, m, 1);
+      workCalendarYM = d.getFullYear()+'-'+pad(d.getMonth()+1);
+      render();
+    };
+    root.querySelectorAll('[data-cal-day]').forEach(b=>{
+      b.onclick = ()=> openModal({type:'addWorkItem', startDate:b.dataset.calDay});
     });
     root.querySelectorAll('[data-toggle-section-edit]').forEach(b=>{
       b.onclick = ()=>{
