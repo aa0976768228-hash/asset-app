@@ -803,7 +803,7 @@
           <div style="text-align:right;">
             <div class="am-row-amt ${l.type==='收入'?'inc':'exp'} am-num">${isShort?'⚠️ ':''}${escapeHtml(accountLabel)}</div>
             <div class="am-row-amt ${l.type==='收入'?'inc':'exp'} am-num">${l.type==='收入'?'+':'-'}${fmtRaw(l.amount)}</div>
-            ${isShort ? `<div class="am-row-sub">這段期間帳戶不夠用</div>` : ''}
+            ${isShort ? `<div class="am-row-sub">帳戶預警</div>` : ''}
           </div>
           <div style="text-align:right;">
             <button class="am-adj-btn" data-edit-tx="${l.id}">編輯</button>
@@ -899,10 +899,11 @@
       <div class="am-row-main">
         <div class="am-row-name">${escapeHtml(pocket.name)}</div>
         ${pocket.note ? `<div class="am-row-sub">${escapeHtml(pocket.note)}</div>` : ''}
-        <div class="am-row-sub">預估發薪前剩餘:<span class="${proj.projected<0?'am-pocket-shortfall':'am-pocket-ok'}">${fmtMoney(proj.projected)}</span> <span class="am-detail-link" data-pocket-detail="${pocket.id}">查看明細</span></div>
+        <div class="am-row-sub">預估發薪前剩餘:<span class="${proj.projected<0?'am-pocket-shortfall':'am-pocket-ok'}">${fmtMoney(proj.projected)}</span></div>
       </div>
       <div>
         <div class="am-row-amt am-num">${fmtMoney(proj.balance)}</div>
+        <div style="text-align:right; margin-top:2px;"><span class="am-detail-link" data-pocket-detail="${pocket.id}">查看明細</span></div>
         ${editOn ? `
         <div style="text-align:right;margin-top:4px; display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
           ${showInterestBtn ? `<button class="am-adj-btn" data-add-interest="${pocket.id}">入利息</button>` : ''}
