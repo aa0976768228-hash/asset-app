@@ -256,6 +256,8 @@
   ];
   const CATEGORY_ALIASES = { '多多':['多多','Puli'] };
   const EXCLUDED_POCKET_ACCOUNTS = ['群益 6000'];
+  const DEFAULT_WORK_CATEGORIES = ['Auto Job','巨集','Auto Mail','MCS','APP','All','專案','提案','KM','網頁'];
+  const DEFAULT_WORK_ITEMS = [{"name": "MCS登入、人工作業任務和AGV任務", "workType": "轉語法", "category": "MCS", "hours": 11.0, "status": "已完成", "startDate": "2026-05-15", "endDate": "2026-05-25"}, {"name": "MCS選單與指令管理", "workType": "開發", "category": "MCS", "hours": 16.0, "status": "已完成", "startDate": "2026-04-23", "endDate": "2026-05-08"}, {"name": "BU系統申請配件清冊AutoMail", "workType": "開發", "category": "Auto Mail", "hours": 1.0, "status": "已完成", "startDate": "2026-04-27", "endDate": "2026-04-27"}, {"name": "BU_Select移轉C#", "workType": "轉語法", "category": "APP", "hours": 43.0, "status": "已完成", "startDate": "2026-03-26", "endDate": "2026-05-07"}, {"name": "FT效率分析整合系統Auto Job移植SG", "workType": "連線", "category": "Auto Job", "hours": 23.0, "status": "已完成", "startDate": "2026-04-27", "endDate": "2026-05-19"}, {"name": "FT_出貨地圖日期顯示", "workType": "修改", "category": "巨集", "hours": 1.0, "status": "已完成", "startDate": "2026-05-29", "endDate": "2026-05-29"}, {"name": "LineName異動新增盤點", "workType": "盤點", "category": "All", "hours": 33.0, "status": "已完成", "startDate": "2026-05-21", "endDate": "2026-06-22"}, {"name": "MCS新增派車指令", "workType": "轉語法", "category": "MCS", "hours": 35.0, "status": "已完成", "startDate": "2026-05-21", "endDate": "2026-06-24"}, {"name": "MFT配件狀態Auto Mail欄位新增", "workType": "開發", "category": "Auto Mail", "hours": 9.0, "status": "已完成", "startDate": "2026-04-29", "endDate": "2026-05-07"}, {"name": "ASSY DS機台log的相關需求", "workType": "修改", "category": "Auto Mail", "hours": 4.0, "status": "已完成", "startDate": "2026-03-13", "endDate": "2026-03-16"}, {"name": "MIGeniusNetN連線轉T1", "workType": "連線", "category": "Auto Job", "hours": 37.0, "status": "已完成", "startDate": "2026-04-30", "endDate": "2026-06-05"}, {"name": "PDA點檢表未點檢Auto Mail", "workType": "開發", "category": "Auto Mail", "hours": 6.0, "status": "已完成", "startDate": "2026-04-29", "endDate": "2026-05-04"}, {"name": "廠區AMR數量模擬", "workType": "模擬", "category": "專案", "hours": 0, "status": "進行中", "startDate": "2026-05-21", "endDate": ""}, {"name": "3558出貨地圖", "workType": "修改", "category": "巨集", "hours": 9.0, "status": "已完成", "startDate": "2026-03-12", "endDate": "2026-03-20"}, {"name": "2026年7月提案改善", "workType": "提案改善", "category": "提案", "hours": 0, "status": "未開始", "startDate": "2026-07-01", "endDate": ""}, {"name": "2026年7月KM", "workType": "", "category": "KM", "hours": 0, "status": "未開始", "startDate": "2026-07-01", "endDate": ""}, {"name": "線上交接系統", "workType": "轉語法", "category": "APP", "hours": 0, "status": "進行中", "startDate": "2026-07-08", "endDate": ""}, {"name": "用Gemini CLI 優化MCS監控畫面", "workType": "改語法", "category": "MCS", "hours": 0, "status": "進行中", "startDate": "2026-07-08", "endDate": ""}];
   let modal = null;
   let budgetView = { mode:'month', period:null, useActualMonths:false };
   let txView = { mode:'month', period:null, group:'detail', categoryFilter:null };
@@ -263,7 +265,10 @@
   let assetSubTab = '收支';
   let shortfallPocketIds = new Set();
   let shortfallStartTx = {}; // 口袋 id -> 造成餘額開始轉為警示狀態的那筆交易 id
-  let editSections = new Set(); // 區塊層級的整批編輯模式:'pocket'、'budget'、'fixed'、'stock'、'goal'
+  let editSections = new Set(); // 區塊層級的整批編輯模式:'pocket'、'budget'、'fixed'、'stock'、'goal'、'workitem'、'resign'
+  let currentPage = 'asset'; // 'asset' | 'work'
+  let workSubTab = '工作項目';
+  let workStatusFilter = '全部';
   let toastTimer = null;
 
   function uid(p){ return p+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
@@ -288,7 +293,8 @@
     'am2:pockets':'pockets', 'am2:stocks':'stocks', 'am2:fixedExpenses':'fixedExpenses',
     'am2:budgets':'budgets', 'am2:ledger':'ledger', 'am2:payday':'payday',
     'am2:quickItems':'quickItems', 'am2:lastPocket':'lastPocketId', 'am2:seedVersion':'seedVersion',
-    'am:goal':'goal', 'am2:savingsGoals':'savingsGoals'
+    'am:goal':'goal', 'am2:savingsGoals':'savingsGoals',
+    'am2:workItems':'workItems', 'am2:workCategories':'workCategories', 'am2:resignationEvents':'resignationEvents'
   };
   let cloudState = null; // 記憶體裡的完整狀態快取,對應資料庫那一列的 data 欄位
   let cloudLoaded = false;
@@ -373,10 +379,11 @@
     }
     cloudState = cloudState || {};
     try{
-      const [pockets,stocks,fixedExpenses,budgets,ledger,payday,goal,quickItems,lastPocketId,savingsGoals] = await Promise.all([
+      const [pockets,stocks,fixedExpenses,budgets,ledger,payday,goal,quickItems,lastPocketId,savingsGoals,workItems,workCategories,resignationEvents] = await Promise.all([
         safeGet('am2:pockets'), safeGet('am2:stocks'), safeGet('am2:fixedExpenses'),
         safeGet('am2:budgets'), safeGet('am2:ledger'), safeGet('am2:payday'), safeGet('am:goal'),
-        safeGet('am2:quickItems'), safeGet('am2:lastPocket'), safeGet('am2:savingsGoals')
+        safeGet('am2:quickItems'), safeGet('am2:lastPocket'), safeGet('am2:savingsGoals'),
+        safeGet('am2:workItems'), safeGet('am2:workCategories'), safeGet('am2:resignationEvents')
       ]);
       state.pockets = Array.isArray(pockets) ? pockets : [];
       state.stocks = Array.isArray(stocks) ? stocks : [];
@@ -388,11 +395,15 @@
       state.quickItems = (quickItems && typeof quickItems==='object') ? quickItems : null;
       state.lastPocketId = lastPocketId || null;
       state.savingsGoals = Array.isArray(savingsGoals) ? savingsGoals : null;
+      state.workItems = Array.isArray(workItems) ? workItems : null;
+      state.workCategories = Array.isArray(workCategories) ? workCategories : null;
+      state.resignationEvents = Array.isArray(resignationEvents) ? resignationEvents : null;
     }catch(e){
       console.error(e);
       state.pockets=[]; state.stocks=[]; state.fixedExpenses=[]; state.budgets=[]; state.ledger=[];
       state.payday={defaultDay:5,overrides:{}}; state.goal={savingsTarget:1000000, emergencyCashTarget:0, stockMonthlyTarget:0, deadline:''};
       state.quickItems=null; state.lastPocketId=null; state.savingsGoals=null;
+      state.workItems=null; state.workCategories=null; state.resignationEvents=null;
     }
 
     // 保險:任何時候都不讓被排除的帳戶(如投資帳戶)變成現金口袋
@@ -449,7 +460,21 @@
       await persist('am2:savingsGoals', state.savingsGoals);
     }
 
-    // 保險:舊版目標格式自動轉成拆開的兩個目標(緊急備用金帳戶 / 緊急備用金現金)+ 股票每月投入
+    // 保險:第一次把 Notion 工作頁面的資料建成種子資料
+    if(state.workItems===null){
+      state.workItems = DEFAULT_WORK_ITEMS.map(w=>({id:uid('wi'), ...w}));
+      await persist('am2:workItems', state.workItems);
+    }
+    if(state.workCategories===null){
+      state.workCategories = DEFAULT_WORK_CATEGORIES.slice();
+      await persist('am2:workCategories', state.workCategories);
+    }
+    if(state.resignationEvents===null){
+      state.resignationEvents = [];
+      await persist('am2:resignationEvents', state.resignationEvents);
+    }
+
+
     if(state.goal && state.goal.savingsTarget===undefined){
       const oldCombined = (state.goal.target||0) + (state.goal.cashTarget||0) + (state.goal.emergencyTarget||0);
       state.goal = { savingsTarget: oldCombined, emergencyCashTarget: 0, stockMonthlyTarget: state.goal.stockMonthlyTarget||0, deadline: state.goal.deadline||'' };
@@ -926,8 +951,129 @@
         + String(e && e.message ? e.message : e).replace(/</g,'&lt;') + '</div></div>';
     }
   }
+  function renderTabBar(){
+    return `
+      <div class="am-tabbar-bg"></div>
+      <div class="am-tabbar">
+        <div class="am-tab ${currentPage==='asset'?'active':''}" data-tab="asset"><div class="am-tab-icon">💰</div><div class="am-tab-label">資產</div></div>
+        <div class="am-tab ${currentPage==='work'?'active':''}" data-tab="work"><div class="am-tab-icon">💼</div><div class="am-tab-label">工作</div></div>
+        <div class="am-tab disabled" data-tab="reading"><div class="am-tab-icon">📚</div><div class="am-tab-label">讀書</div></div>
+        <div class="am-tab disabled" data-tab="daily"><div class="am-tab-icon">🗓️</div><div class="am-tab-label">日常</div></div>
+        <div class="am-tab disabled" data-tab="knowledge"><div class="am-tab-icon">🧠</div><div class="am-tab-label">知識庫</div></div>
+      </div>`;
+  }
+
+  function workStatusColor(status){
+    if(status==='已完成') return 'var(--green)';
+    if(status==='進行中') return 'var(--navy)';
+    return 'var(--ink-soft)';
+  }
+
+  function renderWorkPage(){
+    const items = state.workItems||[];
+    const doneCount = items.filter(w=>w.status==='已完成').length;
+    const progressCount = items.filter(w=>w.status==='進行中').length;
+    const notStartedCount = items.filter(w=>w.status==='未開始').length;
+    const totalHours = items.reduce((s,w)=>s+(w.hours||0),0);
+    const filtered = items.filter(w=> workStatusFilter==='全部' || w.status===workStatusFilter);
+
+    const dSize=76;
+    const donut = donutSvg([
+      {value:doneCount, color:'var(--green)'},
+      {value:progressCount, color:'var(--navy)'},
+      {value:notStartedCount, color:'var(--hairline)'}
+    ], dSize, 'var(--hairline)');
+
+    let html = `
+      <div class="am-header">
+        <div class="am-header-top">
+          <div class="am-title">工作管理</div>
+        </div>
+      </div>
+      <div class="am-body">
+
+        <div class="am-subtab-bar">
+          <button class="am-subtab-btn ${workSubTab==='工作項目'?'sel':''}" data-work-subtab="工作項目">工作項目</button>
+          <button class="am-subtab-btn ${workSubTab==='集點表'?'sel':''}" data-work-subtab="集點表">🔥離職集點表</button>
+        </div>
+
+        ${workSubTab==='工作項目' ? `
+        <div class="am-card">
+          <div style="display:flex; align-items:center; gap:14px;">
+            <div class="am-ring-wrap" style="width:${dSize}px; height:${dSize}px; flex-shrink:0;">${donut}</div>
+            <div style="flex:1; min-width:0;">
+              <div class="am-net-eyebrow">工作項目總覽</div>
+              <div class="am-net-value am-num" style="font-size:22px;">${items.length} 項</div>
+              <div class="am-net-breakdown">已完成 <b class="am-num">${doneCount}</b>・進行中 <b class="am-num">${progressCount}</b>・未開始 <b class="am-num">${notStartedCount}</b></div>
+              <div class="am-net-breakdown">累積花費時數 <b class="am-num">${totalHours}</b> 小時</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="am-card">
+          <div class="am-section-title">工作項目 <span style="display:flex; gap:10px;"><button class="am-add-btn" id="am-add-workitem">＋ 新增項目</button>${sectionEditBtn('workitem','工作項目')}</span></div>
+          <div class="am-quick-tabs" style="margin-bottom:12px;">
+            ${['全部','未開始','進行中','已完成'].map(s=>`<button class="am-quick-tab ${workStatusFilter===s?'sel':''}" data-work-status-filter="${s}">${s}</button>`).join('')}
+          </div>
+          <div class="am-list">
+            ${filtered.length===0 ? '<div class="am-empty">還沒有工作項目</div>' :
+              filtered.slice().sort((a,b)=>(b.startDate||'').localeCompare(a.startDate||'')).map(w=>`
+                <div class="am-row">
+                  <div class="am-row-main">
+                    <div class="am-row-name">${escapeHtml(w.name)}</div>
+                    <div class="am-row-sub">${escapeHtml(w.category||'未分類')}${w.workType?('・'+escapeHtml(w.workType)):''}</div>
+                    <div class="am-row-sub">${w.startDate||'-'}${w.endDate?(' ~ '+w.endDate):''}</div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div class="am-row-amt am-num" style="color:${workStatusColor(w.status)}; font-size:13px;">${escapeHtml(w.status)}</div>
+                    ${w.hours>0?`<div class="am-row-sub">${w.hours} 小時</div>`:''}
+                    <div style="margin-top:4px; display:flex; gap:6px; justify-content:flex-end;">
+                      <button class="am-adj-btn" data-edit-workitem="${w.id}">編輯</button>
+                      ${editSections.has('workitem') ? `<button class="am-row-del" data-del-workitem="${w.id}" title="刪除">刪除</button>` : ''}
+                    </div>
+                  </div>
+                </div>`).join('')}
+          </div>
+          <div class="am-manage-link" id="am-manage-workcats">管理工作分類</div>
+        </div>
+        ` : ''}
+
+        ${workSubTab==='集點表' ? `
+        <div class="am-card" style="text-align:center;">
+          <div class="am-net-eyebrow">已累積</div>
+          <div class="am-goal-bignum am-num" style="font-size:36px; color:var(--gold);">${(state.resignationEvents||[]).length} 點</div>
+          <div class="am-row-sub">每記一次算一點,純紓壓用,不影響任何計算</div>
+        </div>
+        <div class="am-card">
+          <div class="am-section-title">事件紀錄 <span style="display:flex; gap:10px;"><button class="am-add-btn" id="am-add-resign">＋ 新增事件</button>${sectionEditBtn('resign','事件')}</span></div>
+          <div class="am-list">
+            ${(!state.resignationEvents || state.resignationEvents.length===0) ? '<div class="am-empty">還沒有紀錄,先深呼吸,再點右上角新增</div>' :
+              state.resignationEvents.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(ev=>`
+                <div class="am-row">
+                  <div class="am-row-main">
+                    <div class="am-row-name">${escapeHtml(ev.event)}</div>
+                    <div class="am-row-sub">${ev.person?('人:'+escapeHtml(ev.person)):''}</div>
+                    ${ev.reason?`<div class="am-row-sub">原因:${escapeHtml(ev.reason)}</div>`:''}
+                    <div class="am-row-sub">${ev.date||'-'}</div>
+                  </div>
+                  ${editSections.has('resign') ? `<button class="am-row-del" data-del-resign="${ev.id}" title="刪除">刪除</button>` : ''}
+                </div>`).join('')}
+          </div>
+        </div>
+        ` : ''}
+
+      </div>
+      ${renderTabBar()}
+    `;
+
+    if(modal) html += renderWorkModal();
+    root.innerHTML = html;
+    attachWorkEvents();
+  }
+
   function renderInner(){
     if(state.pockets===null){ root.innerHTML='<div class="am-loading">正在準備你的帳本…</div>'; return; }
+    if(currentPage==='work'){ renderWorkPage(); return; }
     const now = new Date();
     const cycle = getCycle(now);
     const thisYM = ymKey(now.getFullYear(), now.getMonth()+1);
@@ -1256,18 +1402,86 @@
         ` : ''}
       </div>
 
-      <div class="am-tabbar-bg"></div>
-      <div class="am-tabbar">
-        <div class="am-tab active" data-tab="asset"><div class="am-tab-icon">💰</div><div class="am-tab-label">資產</div></div>
-        <div class="am-tab disabled" data-tab="reading"><div class="am-tab-icon">📚</div><div class="am-tab-label">讀書</div></div>
-        <div class="am-tab disabled" data-tab="daily"><div class="am-tab-icon">🗓️</div><div class="am-tab-label">日常</div></div>
-        <div class="am-tab disabled" data-tab="knowledge"><div class="am-tab-icon">🧠</div><div class="am-tab-label">知識庫</div></div>
-      </div>
+      ${renderTabBar()}
     `;
 
     if(modal) html += renderModal(cycle, thisYM);
     root.innerHTML = html;
     attachEvents(cycle, thisYM);
+  }
+
+  function renderWorkModal(){
+    if(modal.type==='addWorkItem'){
+      const editing = modal.itemId ? (state.workItems||[]).find(w=>w.id===modal.itemId) : null;
+      const name = modal.name ?? (editing?editing.name:'');
+      const workType = modal.workType ?? (editing?editing.workType:'');
+      const category = modal.category ?? (editing?editing.category:(state.workCategories[0]||''));
+      const hours = modal.hours ?? (editing?editing.hours:0);
+      const status = modal.status ?? (editing?editing.status:'未開始');
+      const startDate = modal.startDate ?? (editing?editing.startDate:new Date().toISOString().slice(0,10));
+      const endDate = modal.endDate ?? (editing?editing.endDate:'');
+      return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">${editing?'編輯':'新增'}工作項目</div>
+        <div class="am-field"><label>作業項目</label><input type="text" id="am-wi-name" value="${escapeHtml(name)}" placeholder="例如:MCS選單與指令管理"></div>
+        <div class="am-field"><label>具體作業內容</label><input type="text" id="am-wi-worktype" value="${escapeHtml(workType)}" placeholder="例如:開發、修改、轉語法"></div>
+        <div class="am-field"><label>分類</label>
+          <select id="am-wi-category">${(state.workCategories||[]).map(c=>`<option value="${escapeHtml(c)}" ${category===c?'selected':''}>${escapeHtml(c)}</option>`).join('')}</select>
+        </div>
+        <div class="am-field"><label>狀態</label>
+          <div class="am-seg">
+            <button class="${status==='未開始'?'sel exp':''}" data-set-wistatus="未開始">未開始</button>
+            <button class="${status==='進行中'?'sel inc':''}" data-set-wistatus="進行中">進行中</button>
+            <button class="${status==='已完成'?'sel inc':''}" data-set-wistatus="已完成">已完成</button>
+          </div>
+        </div>
+        <div class="am-field-row">
+          <div class="am-field"><label>開始時間</label><input type="date" id="am-wi-start" value="${startDate}"></div>
+          <div class="am-field"><label>結束時間</label><input type="date" id="am-wi-end" value="${endDate}"></div>
+        </div>
+        <div class="am-field"><label>所用時長(小時)</label><input type="number" inputmode="decimal" id="am-wi-hours" value="${hours}"></div>
+        <div class="am-sheet-actions">${editing?'<button class="am-btn danger" id="am-del-wi-inline">刪除</button>':''}<button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-workitem">儲存</button></div>
+      </div></div>`;
+    }
+
+    if(modal.type==='manageWorkCats'){
+      return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">管理工作分類</div>
+        ${(state.workCategories||[]).map(c=>`
+          <div class="am-quick-manage-row">
+            <div style="flex:1;font-size:14px;">${escapeHtml(c)}</div>
+            <button class="am-row-del" data-del-workcat="${escapeHtml(c)}">刪除</button>
+          </div>`).join('') || '<div class="am-empty">尚無分類</div>'}
+        <div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--hairline);">
+          <div class="am-field"><label>新增分類</label><input type="text" id="am-newworkcat-name" placeholder="例如:網頁"></div>
+          <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">關閉</button><button class="am-btn primary" id="am-save-newworkcat">新增</button></div>
+        </div>
+      </div></div>`;
+    }
+
+    if(modal.type==='addResignEvent'){
+      return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">新增離職集點事件</div>
+        <div class="am-field"><label>事件</label><input type="text" id="am-rv-event" placeholder="發生什麼事了"></div>
+        <div class="am-field"><label>人(選填)</label><input type="text" id="am-rv-person" placeholder="跟誰有關"></div>
+        <div class="am-field"><label>原因(選填)</label><input type="text" id="am-rv-reason" placeholder="說明一下"></div>
+        <div class="am-field"><label>日期</label><input type="date" id="am-rv-date" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-resign">儲存</button></div>
+      </div></div>`;
+    }
+
+    if(modal.type==='confirmDel' && (modal.kind==='workitem'||modal.kind==='resign')){
+      return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">確定刪除？</div>
+        <p style="font-size:13.5px;color:var(--ink-soft);">${escapeHtml(modal.label||'此項目')}刪除後無法復原。</p>
+        <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn danger" id="am-confirm-del">刪除</button></div>
+      </div></div>`;
+    }
+
+    return '';
   }
 
   function renderModal(cycle, thisYM){
@@ -1601,6 +1815,124 @@
     return '';
   }
 
+  function attachWorkEvents(){
+    const $ = sel=>root.querySelector(sel);
+
+    root.querySelectorAll('.am-tab').forEach(tab=>{
+      tab.onclick = ()=>{
+        const t = tab.dataset.tab;
+        if(t==='asset'||t==='work'){ if(currentPage!==t){ currentPage=t; render(); } return; }
+        showToast('「'+tab.querySelector('.am-tab-label').textContent+'」頁籤即將推出,敬請期待');
+      };
+    });
+
+    root.querySelectorAll('[data-work-subtab]').forEach(b=>{
+      b.onclick = ()=>{ workSubTab = b.dataset.workSubtab; render(); };
+    });
+    root.querySelectorAll('[data-work-status-filter]').forEach(b=>{
+      b.onclick = ()=>{ workStatusFilter = b.dataset.workStatusFilter; render(); };
+    });
+    root.querySelectorAll('[data-toggle-section-edit]').forEach(b=>{
+      b.onclick = ()=>{
+        const key = b.dataset.toggleSectionEdit;
+        if(editSections.has(key)) editSections.delete(key); else editSections.add(key);
+        render();
+      };
+    });
+
+    const addWorkBtn = $('#am-add-workitem'); if(addWorkBtn) addWorkBtn.onclick = ()=> openModal({type:'addWorkItem'});
+    root.querySelectorAll('[data-edit-workitem]').forEach(b=> b.onclick = ()=> openModal({type:'addWorkItem', itemId:b.dataset.editWorkitem}));
+    root.querySelectorAll('[data-del-workitem]').forEach(b=> b.onclick = ()=> openModal({type:'confirmDel', kind:'workitem', id:b.dataset.delWorkitem, label:'這筆工作項目'}));
+    const manageCatsLink = $('#am-manage-workcats'); if(manageCatsLink) manageCatsLink.onclick = ()=> openModal({type:'manageWorkCats'});
+
+    const addResignBtn = $('#am-add-resign'); if(addResignBtn) addResignBtn.onclick = ()=> openModal({type:'addResignEvent'});
+    root.querySelectorAll('[data-del-resign]').forEach(b=> b.onclick = ()=> openModal({type:'confirmDel', kind:'resign', id:b.dataset.delResign, label:'這筆事件紀錄'}));
+
+    const overlay = $('#am-overlay');
+    if(!overlay) return;
+    overlay.addEventListener('click', e=>{ if(e.target===overlay) closeModal(); });
+    const cancel = $('#am-cancel'); if(cancel) cancel.onclick = closeModal;
+
+    if(modal && modal.type==='addWorkItem'){
+      root.querySelectorAll('[data-set-wistatus]').forEach(b=>{
+        b.onclick = ()=>{
+          modal.name=$('#am-wi-name').value; modal.workType=$('#am-wi-worktype').value;
+          modal.category=$('#am-wi-category').value; modal.hours=$('#am-wi-hours').value;
+          modal.startDate=$('#am-wi-start').value; modal.endDate=$('#am-wi-end').value;
+          modal.status = b.dataset.setWistatus; render();
+        };
+      });
+      $('#am-save-workitem').onclick = ()=>{
+        const name = $('#am-wi-name').value.trim();
+        const workType = $('#am-wi-worktype').value.trim();
+        const category = $('#am-wi-category').value;
+        const status = modal.status || '未開始';
+        const startDate = $('#am-wi-start').value;
+        const endDate = $('#am-wi-end').value;
+        const hours = parseFloat($('#am-wi-hours').value)||0;
+        if(!name){ showToast('請輸入作業項目名稱'); return; }
+        state.workItems = state.workItems || [];
+        if(modal.itemId){
+          const w = state.workItems.find(x=>x.id===modal.itemId);
+          if(w){ w.name=name; w.workType=workType; w.category=category; w.status=status; w.startDate=startDate; w.endDate=endDate; w.hours=hours; }
+        } else {
+          state.workItems.push({id:uid('wi'), name, workType, category, status, startDate, endDate, hours});
+        }
+        closeModal(); showToast('已儲存');
+        persist('am2:workItems', state.workItems);
+      };
+      const delInline = $('#am-del-wi-inline');
+      if(delInline) delInline.onclick = ()=>{
+        state.workItems = (state.workItems||[]).filter(w=>w.id!==modal.itemId);
+        closeModal(); showToast('已刪除');
+        persist('am2:workItems', state.workItems);
+      };
+    }
+
+    if(modal && modal.type==='manageWorkCats'){
+      root.querySelectorAll('[data-del-workcat]').forEach(b=>{
+        b.onclick = ()=>{
+          const cat = b.dataset.delWorkcat;
+          if((state.workItems||[]).some(w=>w.category===cat)){ showToast('這個分類還有工作項目在用,無法刪除'); return; }
+          state.workCategories = (state.workCategories||[]).filter(c=>c!==cat);
+          render(); persist('am2:workCategories', state.workCategories);
+        };
+      });
+      $('#am-save-newworkcat').onclick = ()=>{
+        const name = $('#am-newworkcat-name').value.trim();
+        if(!name){ showToast('請輸入分類名稱'); return; }
+        state.workCategories = state.workCategories || [];
+        if(state.workCategories.includes(name)){ showToast('這個分類已經存在'); return; }
+        state.workCategories.push(name);
+        render(); showToast('已新增分類');
+        persist('am2:workCategories', state.workCategories);
+      };
+    }
+
+    if(modal && modal.type==='addResignEvent'){
+      $('#am-save-resign').onclick = ()=>{
+        const event = $('#am-rv-event').value.trim();
+        const person = $('#am-rv-person').value.trim();
+        const reason = $('#am-rv-reason').value.trim();
+        const date = $('#am-rv-date').value;
+        if(!event){ showToast('請輸入事件內容'); return; }
+        state.resignationEvents = state.resignationEvents || [];
+        state.resignationEvents.push({id:uid('rv'), event, person, reason, date});
+        closeModal(); showToast('已記錄,辛苦了');
+        persist('am2:resignationEvents', state.resignationEvents);
+      };
+    }
+
+    if(modal && modal.type==='confirmDel' && (modal.kind==='workitem'||modal.kind==='resign')){
+      $('#am-confirm-del').onclick = ()=>{
+        const {kind,id} = modal;
+        if(kind==='workitem'){ state.workItems = (state.workItems||[]).filter(w=>w.id!==id); persist('am2:workItems', state.workItems); }
+        if(kind==='resign'){ state.resignationEvents = (state.resignationEvents||[]).filter(ev=>ev.id!==id); persist('am2:resignationEvents', state.resignationEvents); }
+        modal=null; render(); showToast('已刪除');
+      };
+    }
+  }
+
   function attachEvents(cycle, thisYM){
     const $ = sel=>root.querySelector(sel);
 
@@ -1684,7 +2016,11 @@
     root.querySelectorAll('[data-del-budget]').forEach(b=> b.onclick = ()=> openModal({type:'confirmDel', kind:'budget', id:b.dataset.delBudget, label:'這筆預算'}));
 
     root.querySelectorAll('.am-tab').forEach(tab=>{
-      tab.onclick = ()=>{ if(tab.dataset.tab==='asset') return; showToast('「'+tab.querySelector('.am-tab-label').textContent+'」頁籤即將推出,敬請期待'); };
+      tab.onclick = ()=>{
+        const t = tab.dataset.tab;
+        if(t==='asset'||t==='work'){ if(currentPage!==t){ currentPage=t; render(); } return; }
+        showToast('「'+tab.querySelector('.am-tab-label').textContent+'」頁籤即將推出,敬請期待');
+      };
     });
 
     const overlay = $('#am-overlay');
