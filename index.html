@@ -276,6 +276,9 @@
   const DEFAULT_EVENTS = [{"name": "看腳", "category": "個人", "person": "", "location": "苗栗縣竹南鎮民權街17號", "date": "2026-07-01", "status": "已完成"}, {"name": "吃飯", "category": "個人", "person": "黃珮溱", "location": "", "date": "2026-06-30", "status": "已完成"}, {"name": "下雲林領畢業證書", "category": "個人", "person": "周妤", "location": "雲林科技大學", "date": "2026-07-03", "status": "已完成"}, {"name": "去台中玩", "category": "個人", "person": "周妤", "location": "台中", "date": "2026-07-04", "status": "作廢"}, {"name": "回龍潭拿東西", "category": "個人", "person": "", "location": "龍潭家裡", "date": "2026-08-08", "status": "計畫"}, {"name": "申請車證", "category": "工作", "person": "", "location": "京元", "date": "2026-07-01", "status": "已完成"}, {"name": "申請call機", "category": "工作", "person": "", "location": "京元", "date": "2026-07-01", "status": "已完成"}, {"name": "看腳", "category": "個人", "person": "", "location": "", "date": "2026-09-03", "status": "已確認"}, {"name": "交畢業證書 拿車證", "category": "工作", "person": "", "location": "京元", "date": "2026-07-07", "status": "已完成"}, {"name": "保齡球比賽", "category": "工作", "person": "", "location": "京元", "date": "2026-07-17", "status": "已確認"}, {"name": "品管上課", "category": "工作", "person": "", "location": "CH1大視聽", "date": "2026-07-24", "status": "作廢"}, {"name": "寵物展", "category": "個人", "person": "曾裕翔小狗狗", "location": "台中會展中心", "date": "2026-07-18", "status": "已確認"}, {"name": "喝大茗吃章魚燒", "category": "工作", "person": "", "location": "京元", "date": "2026-07-16", "status": "已確認"}, {"name": "On call", "category": "工作", "person": "", "location": "京元", "date": "2026-09-12", "status": "已確認"}, {"name": "On call", "category": "工作", "person": "", "location": "京元", "date": "2026-11-14", "status": "已確認"}, {"name": "吃飯", "category": "個人", "person": "國中男生朋友", "location": "", "date": "2026-09-12", "status": "已確認"}, {"name": "中秋四天連假", "category": "個人", "person": "", "location": "", "date": "2026-09-25", "status": "已確認"}, {"name": "國慶日三天連假", "category": "個人", "person": "", "location": "", "date": "2026-10-09", "status": "已確認"}, {"name": "行憲日三天連假", "category": "個人", "person": "", "location": "", "date": "2026-12-25", "status": "已確認"}, {"name": "光復節三天連假", "category": "個人", "person": "", "location": "", "date": "2026-10-24", "status": "已確認"}];
   const DEFAULT_FITNESS_LOGS = [{date:'2026-07-02', bodyPart:'背', note:''},{date:'2026-07-07', bodyPart:'胸', note:''},{date:'2026-07-08', bodyPart:'腿', note:''}];
   const DEFAULT_TOEIC_LOGS = [{date:'2026-02-08', total:555, listening:310, reading:245, examType:'正式考試'}];
+  const DEFAULT_BOOK_GENRES = ['自我成長','心理學','商業','小說','工具書'];
+  const DEFAULT_BOOK_AUTHORS = ['葛蘭特 卡爾登','岸見一郎 古賀史建','克里斯多福 孟','伊迪絲 霍爾','馬克 道格拉斯'];
+  const DEFAULT_PODCAST_CATEGORIES = ['商業','心理','自我成長'];
   let modal = null;
   let budgetView = { mode:'month', period:null, useActualMonths:false };
   let txView = { mode:'month', period:null, group:'detail', categoryFilter:null };
@@ -289,13 +292,109 @@
   let workStatusFilter = '全部';
   let workCalendarYM = null;
   let readingSubTab = '書籍';
+  let bookStatusFilter = '全部';
   let dailySubTab = '行程';
+  let dailyEventView = '清單';
+  let dailyCalendarYM = null;
   let workCalendarMonth = null;
   let toastTimer = null;
 
   function uid(p){ return p+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
   function pad(n){ return String(n).padStart(2,'0'); }
   function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // ---------- 類似 Notion 的區塊筆記(標題大小可調、待辦清單勾選) ----------
+  function normalizeNoteBlocks(notes){
+    if(Array.isArray(notes)) return notes.map(b=>({id:b.id||uid('nb'), type:b.type||'text', content:b.content||'', checked:!!b.checked}));
+    if(typeof notes==='string' && notes.trim()) return [{id:uid('nb'), type:'text', content:notes, checked:false}];
+    return [];
+  }
+  function noteBlocksPreview(blocks){
+    return normalizeNoteBlocks(blocks).map(b=> (b.type==='todo' ? (b.checked?'☑ ':'☐ ') : '') + b.content ).filter(Boolean).join('  ');
+  }
+  function noteBlockFontSize(type){
+    if(type==='h1') return 'var(--font-lg)';
+    if(type==='h2') return 'var(--font-md)';
+    if(type==='h3') return 'var(--font-body)';
+    return 'var(--font-body)';
+  }
+  function autoThumbnailFromLink(link){
+    if(!link) return '';
+    let m = link.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([a-zA-Z0-9_-]{6,})/);
+    if(m) return 'https://img.youtube.com/vi/'+m[1]+'/hqdefault.jpg';
+    return '';
+  }
+  function renderNoteBlocksEditor(blocks){
+    return `
+    <div id="am-note-blocks">
+      ${blocks.length===0 ? '<div class="am-empty">還沒有內容,點下面「新增段落」開始寫</div>' : blocks.map((b,i)=>`
+        <div class="am-note-block" style="margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid var(--hairline);">
+          <div class="am-seg" style="margin-bottom:6px;">
+            <button class="${b.type==='h1'?'sel inc':''}" data-note-blocktype="${i}:h1">大標</button>
+            <button class="${b.type==='h2'?'sel inc':''}" data-note-blocktype="${i}:h2">中標</button>
+            <button class="${b.type==='h3'?'sel inc':''}" data-note-blocktype="${i}:h3">小標</button>
+            <button class="${b.type==='text'?'sel inc':''}" data-note-blocktype="${i}:text">文字</button>
+            <button class="${b.type==='todo'?'sel inc':''}" data-note-blocktype="${i}:todo">待辦</button>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            ${b.type==='todo' ? `<input type="checkbox" data-note-check="${i}" ${b.checked?'checked':''} style="width:18px;height:18px;flex-shrink:0;">` : ''}
+            <input type="text" data-note-content="${i}" value="${escapeHtml(b.content)}" placeholder="輸入內容"
+              style="flex:1; border:none; border-bottom:1px solid var(--hairline); padding:6px 2px; font-size:${noteBlockFontSize(b.type)}; font-weight:${b.type.charAt(0)==='h'?800:400}; font-family:'Inter',sans-serif; color:var(--ink); ${b.type==='todo'&&b.checked?'text-decoration:line-through;color:var(--ink-soft);':''}">
+            <button class="am-row-del" data-note-delblock="${i}" style="flex-shrink:0;">刪除</button>
+          </div>
+        </div>`).join('')}
+    </div>
+    <button class="am-add-btn" id="am-note-addblock" type="button">＋ 新增段落</button>`;
+  }
+  function syncNoteBlocksFromDOM(){
+    if(!modal || !modal.blocks) return;
+    const count = root.querySelectorAll('[data-note-content]').length;
+    const synced = [];
+    for(let i=0;i<count;i++){
+      const contentEl = root.querySelector(`[data-note-content="${i}"]`);
+      const checkEl = root.querySelector(`[data-note-check="${i}"]`);
+      if(!contentEl) continue;
+      synced.push({
+        id: modal.blocks[i] ? modal.blocks[i].id : uid('nb'),
+        type: modal.blocks[i] ? modal.blocks[i].type : 'text',
+        content: contentEl.value,
+        checked: checkEl ? checkEl.checked : (modal.blocks[i]?modal.blocks[i].checked:false),
+      });
+    }
+    modal.blocks = synced;
+  }
+  function bindNoteBlockEvents(){
+    if(!modal || !modal.blocks) return;
+    root.querySelectorAll('[data-note-blocktype]').forEach(b=>{
+      b.onclick = ()=>{
+        syncNoteBlocksFromDOM();
+        const parts = b.dataset.noteBlocktype.split(':');
+        const idx = parseInt(parts[0]); const type = parts[1];
+        modal.blocks[idx].type = type;
+        render();
+      };
+    });
+    root.querySelectorAll('[data-note-check]').forEach(b=>{
+      b.onchange = ()=>{
+        syncNoteBlocksFromDOM();
+        render();
+      };
+    });
+    root.querySelectorAll('[data-note-delblock]').forEach(b=>{
+      b.onclick = ()=>{
+        syncNoteBlocksFromDOM();
+        modal.blocks.splice(parseInt(b.dataset.noteDelblock),1);
+        render();
+      };
+    });
+    const addBtn = root.querySelector('#am-note-addblock');
+    if(addBtn) addBtn.onclick = ()=>{
+      syncNoteBlocksFromDOM();
+      modal.blocks.push({id:uid('nb'), type:'text', content:'', checked:false});
+      render();
+    };
+  }
+
   let privacyMode = false;
   function fmtMoney(n){
     if(privacyMode) return 'NT$ ****';
@@ -320,7 +419,8 @@
     'am2:workTypes':'workTypes', 'am2:recurringTemplates':'recurringTemplates', 'am2:resignPeople':'resignPeople',
     'am2:workProfile':'workProfile', 'am2:companyHistory':'companyHistory',
     'am2:books':'books', 'am2:podcasts':'podcasts', 'am2:events':'events',
-    'am2:fitnessLogs':'fitnessLogs', 'am2:toeicLogs':'toeicLogs', 'am2:knowledgeLinks':'knowledgeLinks'
+    'am2:fitnessLogs':'fitnessLogs', 'am2:toeicLogs':'toeicLogs', 'am2:knowledgeLinks':'knowledgeLinks',
+    'am2:bookGenres':'bookGenres', 'am2:bookAuthors':'bookAuthors', 'am2:podcastCategories':'podcastCategories'
   };
   let cloudState = null; // 記憶體裡的完整狀態快取,對應資料庫那一列的 data 欄位
   let cloudLoaded = false;
@@ -405,7 +505,7 @@
     }
     cloudState = cloudState || {};
     try{
-      const [pockets,stocks,fixedExpenses,budgets,ledger,payday,goal,quickItems,lastPocketId,savingsGoals,workItems,workCategories,resignationEvents,workTypes,recurringTemplates,resignPeople,workProfile,companyHistory,books,podcasts,events,fitnessLogs,toeicLogs,knowledgeLinks] = await Promise.all([
+      const [pockets,stocks,fixedExpenses,budgets,ledger,payday,goal,quickItems,lastPocketId,savingsGoals,workItems,workCategories,resignationEvents,workTypes,recurringTemplates,resignPeople,workProfile,companyHistory,books,podcasts,events,fitnessLogs,toeicLogs,knowledgeLinks,bookGenres,bookAuthors,podcastCategories] = await Promise.all([
         safeGet('am2:pockets'), safeGet('am2:stocks'), safeGet('am2:fixedExpenses'),
         safeGet('am2:budgets'), safeGet('am2:ledger'), safeGet('am2:payday'), safeGet('am:goal'),
         safeGet('am2:quickItems'), safeGet('am2:lastPocket'), safeGet('am2:savingsGoals'),
@@ -413,7 +513,8 @@
         safeGet('am2:workTypes'), safeGet('am2:recurringTemplates'), safeGet('am2:resignPeople'),
         safeGet('am2:workProfile'), safeGet('am2:companyHistory'),
         safeGet('am2:books'), safeGet('am2:podcasts'), safeGet('am2:events'),
-        safeGet('am2:fitnessLogs'), safeGet('am2:toeicLogs'), safeGet('am2:knowledgeLinks')
+        safeGet('am2:fitnessLogs'), safeGet('am2:toeicLogs'), safeGet('am2:knowledgeLinks'),
+        safeGet('am2:bookGenres'), safeGet('am2:bookAuthors'), safeGet('am2:podcastCategories')
       ]);
       state.pockets = Array.isArray(pockets) ? pockets : [];
       state.stocks = Array.isArray(stocks) ? stocks : [];
@@ -439,6 +540,9 @@
       state.fitnessLogs = Array.isArray(fitnessLogs) ? fitnessLogs : null;
       state.toeicLogs = Array.isArray(toeicLogs) ? toeicLogs : null;
       state.knowledgeLinks = Array.isArray(knowledgeLinks) ? knowledgeLinks : null;
+      state.bookGenres = Array.isArray(bookGenres) ? bookGenres : null;
+      state.bookAuthors = Array.isArray(bookAuthors) ? bookAuthors : null;
+      state.podcastCategories = Array.isArray(podcastCategories) ? podcastCategories : null;
     }catch(e){
       console.error(e);
       state.pockets=[]; state.stocks=[]; state.fixedExpenses=[]; state.budgets=[]; state.ledger=[];
@@ -449,6 +553,7 @@
       state.workProfile=null; state.companyHistory=null;
       state.books=null; state.podcasts=null; state.events=null;
       state.fitnessLogs=null; state.toeicLogs=null; state.knowledgeLinks=null;
+      state.bookGenres=null; state.bookAuthors=null; state.podcastCategories=null;
     }
 
     // 保險:任何時候都不讓被排除的帳戶(如投資帳戶)變成現金口袋
@@ -557,6 +662,18 @@
     if(state.knowledgeLinks===null){
       state.knowledgeLinks = [];
       await persist('am2:knowledgeLinks', state.knowledgeLinks);
+    }
+    if(state.bookGenres===null){
+      state.bookGenres = DEFAULT_BOOK_GENRES.slice();
+      await persist('am2:bookGenres', state.bookGenres);
+    }
+    if(state.bookAuthors===null){
+      state.bookAuthors = DEFAULT_BOOK_AUTHORS.slice();
+      await persist('am2:bookAuthors', state.bookAuthors);
+    }
+    if(state.podcastCategories===null){
+      state.podcastCategories = DEFAULT_PODCAST_CATEGORIES.slice();
+      await persist('am2:podcastCategories', state.podcastCategories);
     }
     if(state.recurringTemplates===null){
       state.recurringTemplates = DEFAULT_RECURRING_TEMPLATES.map(t=>({...t}));
@@ -1201,7 +1318,7 @@
                     <div class="am-row-name">${escapeHtml(w.name)}${w.recurringTemplateId?' 🔁':''}</div>
                     <div class="am-row-sub">${escapeHtml(w.category||'未分類')}${w.workType?('・'+escapeHtml(w.workType)):''}</div>
                     <div class="am-row-sub">${w.startDate||'-'}${w.endDate?(' ~ '+w.endDate):''}</div>
-                    ${w.notes?`<div class="am-row-sub">📝 ${escapeHtml(w.notes).slice(0,40)}${w.notes.length>40?'…':''}</div>`:''}
+                    ${(()=>{ const prev = noteBlocksPreview(w.notes); return prev ? `<div class="am-row-sub">📝 ${escapeHtml(prev.slice(0,40))}${prev.length>40?'…':''}</div>` : ''; })()}
                   </div>
                   <div style="text-align:right;">
                     <div class="am-row-amt am-num" style="color:${workStatusColor(w.status)}; font-size:13px;">${escapeHtml(w.status)}</div>
@@ -1418,6 +1535,7 @@
   function renderReadingPage(){
     const books = state.books||[];
     const podcasts = state.podcasts||[];
+    const filteredBooks = books.filter(b=> bookStatusFilter==='全部' || b.status===bookStatusFilter);
     let html = `
       <div class="am-header"><div class="am-header-top"><div class="am-title">小菱的 All in One</div></div></div>
       <div class="am-body">
@@ -1429,20 +1547,28 @@
         ${readingSubTab==='書籍' ? `
         <div class="am-card">
           <div class="am-section-title">書籍 <span style="display:flex; gap:10px;"><button class="am-add-btn" id="am-add-book">＋ 新增書籍</button>${sectionEditBtn('book','書籍')}</span></div>
+          <div style="display:flex; gap:14px; margin-bottom:10px;">
+            <span class="am-detail-link" id="am-manage-genres">管理類型</span>
+            <span class="am-detail-link" id="am-manage-authors">管理作者</span>
+          </div>
+          <div class="am-quick-tabs" style="margin-bottom:12px;">
+            ${['全部','想讀','閱讀中','完讀'].map(s=>`<button class="am-quick-tab ${bookStatusFilter===s?'sel':''}" data-book-status-filter="${s}">${s}</button>`).join('')}
+          </div>
           <div class="am-list">
-            ${books.length===0?'<div class="am-empty">還沒有書籍</div>':
-              books.slice().sort((a,b)=>(b.startDate||b.endDate||'').localeCompare(a.startDate||a.endDate||'')).map(b=>{
+            ${filteredBooks.length===0?'<div class="am-empty">還沒有書籍</div>':
+              filteredBooks.slice().sort((a,b)=>(b.startDate||b.endDate||'').localeCompare(a.startDate||a.endDate||'')).map(b=>{
                 const pct = b.progress||0;
                 return `
                 <div class="am-row">
+                  ${b.coverUrl ? `<img src="${escapeHtml(b.coverUrl)}" style="width:44px;height:60px;object-fit:cover;border-radius:6px;flex-shrink:0;" onerror="this.style.display='none'">` : `
                   <div class="am-mini-ring">${ringSvg(pct/100, 44, bookStatusColor(b.status), 'var(--hairline)')}
                     <div class="am-mini-ring-pct">${pct}%</div>
-                  </div>
+                  </div>`}
                   <div class="am-row-main">
                     <div class="am-row-name">${escapeHtml(b.title)}</div>
                     <div class="am-row-sub">${b.author?escapeHtml(b.author):'作者未知'}${b.genre?('・'+escapeHtml(b.genre)):''}</div>
-                    <div class="am-row-sub">${escapeHtml(b.status)}${b.endDate?('・完讀 '+b.endDate):(b.startDate?('・開始 '+b.startDate):'')}</div>
-                    ${b.notes?`<div class="am-row-sub">📝 ${escapeHtml(b.notes).slice(0,40)}${b.notes.length>40?'…':''}</div>`:''}
+                    <div class="am-row-sub">${escapeHtml(b.status)}${b.coverUrl?('・進度 '+pct+'%'):''}${b.endDate?('・完讀 '+b.endDate):(b.startDate?('・開始 '+b.startDate):'')}</div>
+                    ${(()=>{ const prev = noteBlocksPreview(b.notes); return prev ? `<div class="am-row-sub">📝 ${escapeHtml(prev.slice(0,40))}${prev.length>40?'…':''}</div>` : ''; })()}
                   </div>
                   <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
                     <button class="am-adj-btn" data-edit-book="${b.id}">編輯</button>
@@ -1457,21 +1583,27 @@
         ${readingSubTab==='Podcast' ? `
         <div class="am-card">
           <div class="am-section-title">🎧 Podcast / 影片 <span style="display:flex; gap:10px;"><button class="am-add-btn" id="am-add-podcast">＋ 新增</button>${sectionEditBtn('podcast','Podcast')}</span></div>
+          <div style="margin-bottom:10px;"><span class="am-detail-link" id="am-manage-podcastcats">管理類別</span></div>
           <div class="am-list">
             ${podcasts.length===0?'<div class="am-empty">還沒有紀錄</div>':
-              podcasts.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(p=>`
+              podcasts.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(p=>{
+                const thumb = autoThumbnailFromLink(p.link);
+                return `
                 <div class="am-row">
+                  ${thumb?`<img src="${escapeHtml(thumb)}" style="width:64px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0;" onerror="this.style.display='none'">`:''}
                   <div class="am-row-main">
                     <div class="am-row-name">${escapeHtml(p.title)}</div>
                     <div class="am-row-sub">${escapeHtml(p.channel||'')}${p.category?('・'+escapeHtml(p.category)):''}${p.date?('・'+p.date):''}</div>
                     ${p.link?`<div class="am-row-sub"><a href="${escapeHtml(p.link)}" target="_blank" style="color:var(--blue);">連結</a></div>`:''}
+                    ${(()=>{ const prev = noteBlocksPreview(p.notes); return prev ? `<div class="am-row-sub">📝 ${escapeHtml(prev.slice(0,40))}${prev.length>40?'…':''}</div>` : ''; })()}
                   </div>
                   <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
                     <div class="am-row-amt am-num" style="font-size:12.5px; color:${p.status==='已看'?'var(--green)':'var(--ink-soft)'};">${escapeHtml(p.status||'未看')}</div>
                     <button class="am-adj-btn" data-edit-podcast="${p.id}">編輯</button>
                     ${editSections.has('podcast')?`<button class="am-row-del" data-del-podcast="${p.id}" title="刪除">刪除</button>`:''}
                   </div>
-                </div>`).join('')}
+                </div>`;
+              }).join('')}
           </div>
         </div>
         ` : ''}
@@ -1491,14 +1623,22 @@
       const status = modal.status ?? (editing?editing.status:'想讀');
       const genre = modal.genre ?? (editing?editing.genre:'');
       const progress = modal.progress ?? (editing?editing.progress:0);
+      const coverUrl = modal.coverUrl ?? (editing?(editing.coverUrl||''):'');
       const startDate = modal.startDate ?? (editing?editing.startDate:'');
       const endDate = modal.endDate ?? (editing?editing.endDate:'');
       const notes = modal.notes ?? (editing?(editing.notes||''):'');
+      if(!modal.blocks) modal.blocks = normalizeNoteBlocks(notes);
       return `
       <div class="am-overlay" id="am-overlay"><div class="am-sheet">
         <div class="am-sheet-title">${editing?'編輯':'新增'}書籍</div>
         <div class="am-field"><label>書名</label><input type="text" id="am-bk-title" value="${escapeHtml(title)}"></div>
-        <div class="am-field"><label>作者(選填)</label><input type="text" id="am-bk-author" value="${escapeHtml(author)}"></div>
+        <div class="am-field"><label>封面圖片連結(選填)</label><input type="text" id="am-bk-cover" value="${escapeHtml(coverUrl)}" placeholder="貼一個圖片網址"></div>
+        <div class="am-field"><label>作者(選填)</label>
+          <select id="am-bk-author">
+            <option value="">未指定</option>
+            ${(state.bookAuthors||[]).map(a=>`<option value="${escapeHtml(a)}" ${author===a?'selected':''}>${escapeHtml(a)}</option>`).join('')}
+          </select>
+        </div>
         <div class="am-field"><label>狀態</label>
           <div class="am-seg">
             <button class="${status==='想讀'?'sel exp':''}" data-set-bkstatus="想讀">想讀</button>
@@ -1506,13 +1646,18 @@
             <button class="${status==='完讀'?'sel inc':''}" data-set-bkstatus="完讀">完讀</button>
           </div>
         </div>
-        <div class="am-field"><label>類型(選填)</label><input type="text" id="am-bk-genre" value="${escapeHtml(genre)}"></div>
+        <div class="am-field"><label>類型(選填)</label>
+          <select id="am-bk-genre">
+            <option value="">未指定</option>
+            ${(state.bookGenres||[]).map(g=>`<option value="${escapeHtml(g)}" ${genre===g?'selected':''}>${escapeHtml(g)}</option>`).join('')}
+          </select>
+        </div>
         <div class="am-field"><label>進度(%)</label><input type="number" inputmode="decimal" id="am-bk-progress" value="${progress}"></div>
         <div class="am-field-row">
           <div class="am-field"><label>開始閱讀日</label><input type="date" id="am-bk-start" value="${startDate}"></div>
           <div class="am-field"><label>完讀日</label><input type="date" id="am-bk-end" value="${endDate}"></div>
         </div>
-        <div class="am-field"><label>筆記</label><textarea id="am-bk-notes" rows="5" style="width:100%; border:1px solid var(--hairline); border-radius:10px; padding:10px 12px; font-size:14.5px; font-family:'Inter',sans-serif; color:var(--ink); resize:vertical;">${escapeHtml(notes)}</textarea></div>
+        <div class="am-field"><label>筆記</label>${renderNoteBlocksEditor(modal.blocks)}</div>
         <div class="am-sheet-actions">${editing?'<button class="am-btn danger" id="am-del-bk-inline">刪除</button>':''}<button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-book">儲存</button></div>
       </div></div>`;
     }
@@ -1524,13 +1669,20 @@
       const link = modal.link ?? (editing?editing.link:'');
       const date = modal.date ?? (editing?editing.date:new Date().toISOString().slice(0,10));
       const status = modal.status ?? (editing?editing.status:'未看');
+      const notes = modal.notes ?? (editing?(editing.notes||''):'');
+      if(!modal.blocks) modal.blocks = normalizeNoteBlocks(notes);
       return `
       <div class="am-overlay" id="am-overlay"><div class="am-sheet">
         <div class="am-sheet-title">${editing?'編輯':'新增'} Podcast / 影片</div>
         <div class="am-field"><label>標題</label><input type="text" id="am-pc-title" value="${escapeHtml(title)}"></div>
         <div class="am-field"><label>頻道(選填)</label><input type="text" id="am-pc-channel" value="${escapeHtml(channel)}"></div>
-        <div class="am-field"><label>類別(選填)</label><input type="text" id="am-pc-category" value="${escapeHtml(category)}"></div>
-        <div class="am-field"><label>連結(選填)</label><input type="text" id="am-pc-link" value="${escapeHtml(link)}"></div>
+        <div class="am-field"><label>類別(選填)</label>
+          <select id="am-pc-category">
+            <option value="">未指定</option>
+            ${(state.podcastCategories||[]).map(c=>`<option value="${escapeHtml(c)}" ${category===c?'selected':''}>${escapeHtml(c)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="am-field"><label>連結(選填,YouTube 連結會自動抓縮圖)</label><input type="text" id="am-pc-link" value="${escapeHtml(link)}"></div>
         <div class="am-field"><label>日期</label><input type="date" id="am-pc-date" value="${date}"></div>
         <div class="am-field"><label>狀態</label>
           <div class="am-seg">
@@ -1538,7 +1690,53 @@
             <button class="${status==='已看'?'sel inc':''}" data-set-pcstatus="已看">已看</button>
           </div>
         </div>
+        <div class="am-field"><label>筆記</label>${renderNoteBlocksEditor(modal.blocks)}</div>
         <div class="am-sheet-actions">${editing?'<button class="am-btn danger" id="am-del-pc-inline">刪除</button>':''}<button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-podcast">儲存</button></div>
+      </div></div>`;
+    }
+    if(modal.type==='manageBookGenres'){
+      return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">管理書籍類型</div>
+        ${(state.bookGenres||[]).map(g=>`
+          <div class="am-quick-manage-row">
+            <div style="flex:1;font-size:14px;">${escapeHtml(g)}</div>
+            <button class="am-row-del" data-del-genre="${escapeHtml(g)}">刪除</button>
+          </div>`).join('') || '<div class="am-empty">尚無類型</div>'}
+        <div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--hairline);">
+          <div class="am-field"><label>新增類型</label><input type="text" id="am-newgenre-name" placeholder="例如:小說"></div>
+          <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">關閉</button><button class="am-btn primary" id="am-save-newgenre">新增</button></div>
+        </div>
+      </div></div>`;
+    }
+    if(modal.type==='manageBookAuthors'){
+      return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">管理作者</div>
+        ${(state.bookAuthors||[]).map(a=>`
+          <div class="am-quick-manage-row">
+            <div style="flex:1;font-size:14px;">${escapeHtml(a)}</div>
+            <button class="am-row-del" data-del-author="${escapeHtml(a)}">刪除</button>
+          </div>`).join('') || '<div class="am-empty">尚無作者</div>'}
+        <div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--hairline);">
+          <div class="am-field"><label>新增作者</label><input type="text" id="am-newauthor-name"></div>
+          <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">關閉</button><button class="am-btn primary" id="am-save-newauthor">新增</button></div>
+        </div>
+      </div></div>`;
+    }
+    if(modal.type==='managePodcastCats'){
+      return `
+      <div class="am-overlay" id="am-overlay"><div class="am-sheet">
+        <div class="am-sheet-title">管理 Podcast 類別</div>
+        ${(state.podcastCategories||[]).map(c=>`
+          <div class="am-quick-manage-row">
+            <div style="flex:1;font-size:14px;">${escapeHtml(c)}</div>
+            <button class="am-row-del" data-del-podcastcat="${escapeHtml(c)}">刪除</button>
+          </div>`).join('') || '<div class="am-empty">尚無類別</div>'}
+        <div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--hairline);">
+          <div class="am-field"><label>新增類別</label><input type="text" id="am-newpodcastcat-name"></div>
+          <div class="am-sheet-actions"><button class="am-btn ghost" id="am-cancel">關閉</button><button class="am-btn primary" id="am-save-newpodcastcat">新增</button></div>
+        </div>
       </div></div>`;
     }
     if(modal.type==='confirmDel' && (modal.kind==='book'||modal.kind==='podcast')){
@@ -1564,6 +1762,9 @@
     root.querySelectorAll('[data-reading-subtab]').forEach(b=>{
       b.onclick = ()=>{ readingSubTab = b.dataset.readingSubtab; render(); };
     });
+    root.querySelectorAll('[data-book-status-filter]').forEach(b=>{
+      b.onclick = ()=>{ bookStatusFilter = b.dataset.bookStatusFilter; render(); };
+    });
     root.querySelectorAll('[data-toggle-section-edit]').forEach(b=>{
       b.onclick = ()=>{
         const key = b.dataset.toggleSectionEdit;
@@ -1577,6 +1778,9 @@
     const addPodcastBtn = $('#am-add-podcast'); if(addPodcastBtn) addPodcastBtn.onclick = ()=> openModal({type:'addPodcast'});
     root.querySelectorAll('[data-edit-podcast]').forEach(b=> b.onclick = ()=> openModal({type:'addPodcast', podcastId:b.dataset.editPodcast}));
     root.querySelectorAll('[data-del-podcast]').forEach(b=> b.onclick = ()=> openModal({type:'confirmDel', kind:'podcast', id:b.dataset.delPodcast, label:'這筆紀錄'}));
+    const manageGenresLink = $('#am-manage-genres'); if(manageGenresLink) manageGenresLink.onclick = ()=> openModal({type:'manageBookGenres'});
+    const manageAuthorsLink = $('#am-manage-authors'); if(manageAuthorsLink) manageAuthorsLink.onclick = ()=> openModal({type:'manageBookAuthors'});
+    const managePodcastCatsLink = $('#am-manage-podcastcats'); if(managePodcastCatsLink) managePodcastCatsLink.onclick = ()=> openModal({type:'managePodcastCats'});
 
     const overlay = $('#am-overlay');
     if(!overlay) return;
@@ -1588,26 +1792,31 @@
         b.onclick = ()=>{
           modal.title=$('#am-bk-title').value; modal.author=$('#am-bk-author').value;
           modal.genre=$('#am-bk-genre').value; modal.progress=$('#am-bk-progress').value;
-          modal.startDate=$('#am-bk-start').value; modal.endDate=$('#am-bk-end').value; modal.notes=$('#am-bk-notes').value;
+          modal.coverUrl=$('#am-bk-cover').value;
+          modal.startDate=$('#am-bk-start').value; modal.endDate=$('#am-bk-end').value;
+          syncNoteBlocksFromDOM();
           modal.status = b.dataset.setBkstatus; render();
         };
       });
+      bindNoteBlockEvents();
       $('#am-save-book').onclick = ()=>{
+        syncNoteBlocksFromDOM();
         const title = $('#am-bk-title').value.trim();
-        const author = $('#am-bk-author').value.trim();
+        const author = $('#am-bk-author').value;
         const status = modal.status || '想讀';
-        const genre = $('#am-bk-genre').value.trim();
+        const genre = $('#am-bk-genre').value;
         const progress = parseFloat($('#am-bk-progress').value)||0;
+        const coverUrl = $('#am-bk-cover').value.trim();
         const startDate = $('#am-bk-start').value;
         const endDate = $('#am-bk-end').value;
-        const notes = $('#am-bk-notes').value;
+        const notes = modal.blocks;
         if(!title){ showToast('請輸入書名'); return; }
         state.books = state.books || [];
         if(modal.bookId){
           const b = state.books.find(x=>x.id===modal.bookId);
-          if(b){ b.title=title; b.author=author; b.status=status; b.genre=genre; b.progress=progress; b.startDate=startDate; b.endDate=endDate; b.notes=notes; }
+          if(b){ b.title=title; b.author=author; b.status=status; b.genre=genre; b.progress=progress; b.coverUrl=coverUrl; b.startDate=startDate; b.endDate=endDate; b.notes=notes; }
         } else {
-          state.books.push({id:uid('bk'), title, author, status, genre, progress, totalPages:0, pagesRead:0, startDate, endDate, notes});
+          state.books.push({id:uid('bk'), title, author, status, genre, progress, coverUrl, totalPages:0, pagesRead:0, startDate, endDate, notes});
         }
         closeModal(); showToast('已儲存');
         persist('am2:books', state.books);
@@ -1624,23 +1833,27 @@
         b.onclick = ()=>{
           modal.title=$('#am-pc-title').value; modal.channel=$('#am-pc-channel').value;
           modal.category=$('#am-pc-category').value; modal.link=$('#am-pc-link').value; modal.date=$('#am-pc-date').value;
+          syncNoteBlocksFromDOM();
           modal.status = b.dataset.setPcstatus; render();
         };
       });
+      bindNoteBlockEvents();
       $('#am-save-podcast').onclick = ()=>{
+        syncNoteBlocksFromDOM();
         const title = $('#am-pc-title').value.trim();
         const channel = $('#am-pc-channel').value.trim();
-        const category = $('#am-pc-category').value.trim();
+        const category = $('#am-pc-category').value;
         const link = $('#am-pc-link').value.trim();
         const date = $('#am-pc-date').value;
         const status = modal.status || '未看';
+        const notes = modal.blocks;
         if(!title){ showToast('請輸入標題'); return; }
         state.podcasts = state.podcasts || [];
         if(modal.podcastId){
           const p = state.podcasts.find(x=>x.id===modal.podcastId);
-          if(p){ p.title=title; p.channel=channel; p.category=category; p.link=link; p.date=date; p.status=status; }
+          if(p){ p.title=title; p.channel=channel; p.category=category; p.link=link; p.date=date; p.status=status; p.notes=notes; }
         } else {
-          state.podcasts.push({id:uid('pd'), title, channel, category, link, date, status, notes:''});
+          state.podcasts.push({id:uid('pd'), title, channel, category, link, date, status, notes});
         }
         closeModal(); showToast('已儲存');
         persist('am2:podcasts', state.podcasts);
@@ -1650,6 +1863,63 @@
         state.podcasts = (state.podcasts||[]).filter(p=>p.id!==modal.podcastId);
         closeModal(); showToast('已刪除');
         persist('am2:podcasts', state.podcasts);
+      };
+    }
+    if(modal && modal.type==='manageBookGenres'){
+      root.querySelectorAll('[data-del-genre]').forEach(b=>{
+        b.onclick = ()=>{
+          const g = b.dataset.delGenre;
+          if((state.books||[]).some(x=>x.genre===g)){ showToast('這個類型還有書籍在用,無法刪除'); return; }
+          state.bookGenres = (state.bookGenres||[]).filter(x=>x!==g);
+          render(); persist('am2:bookGenres', state.bookGenres);
+        };
+      });
+      $('#am-save-newgenre').onclick = ()=>{
+        const name = $('#am-newgenre-name').value.trim();
+        if(!name){ showToast('請輸入類型名稱'); return; }
+        state.bookGenres = state.bookGenres || [];
+        if(state.bookGenres.includes(name)){ showToast('這個類型已經存在'); return; }
+        state.bookGenres.push(name);
+        render(); showToast('已新增');
+        persist('am2:bookGenres', state.bookGenres);
+      };
+    }
+    if(modal && modal.type==='manageBookAuthors'){
+      root.querySelectorAll('[data-del-author]').forEach(b=>{
+        b.onclick = ()=>{
+          const a = b.dataset.delAuthor;
+          if((state.books||[]).some(x=>x.author===a)){ showToast('這個作者還有書籍在用,無法刪除'); return; }
+          state.bookAuthors = (state.bookAuthors||[]).filter(x=>x!==a);
+          render(); persist('am2:bookAuthors', state.bookAuthors);
+        };
+      });
+      $('#am-save-newauthor').onclick = ()=>{
+        const name = $('#am-newauthor-name').value.trim();
+        if(!name){ showToast('請輸入作者名稱'); return; }
+        state.bookAuthors = state.bookAuthors || [];
+        if(state.bookAuthors.includes(name)){ showToast('這個作者已經存在'); return; }
+        state.bookAuthors.push(name);
+        render(); showToast('已新增');
+        persist('am2:bookAuthors', state.bookAuthors);
+      };
+    }
+    if(modal && modal.type==='managePodcastCats'){
+      root.querySelectorAll('[data-del-podcastcat]').forEach(b=>{
+        b.onclick = ()=>{
+          const c = b.dataset.delPodcastcat;
+          if((state.podcasts||[]).some(x=>x.category===c)){ showToast('這個類別還有紀錄在用,無法刪除'); return; }
+          state.podcastCategories = (state.podcastCategories||[]).filter(x=>x!==c);
+          render(); persist('am2:podcastCategories', state.podcastCategories);
+        };
+      });
+      $('#am-save-newpodcastcat').onclick = ()=>{
+        const name = $('#am-newpodcastcat-name').value.trim();
+        if(!name){ showToast('請輸入類別名稱'); return; }
+        state.podcastCategories = state.podcastCategories || [];
+        if(state.podcastCategories.includes(name)){ showToast('這個類別已經存在'); return; }
+        state.podcastCategories.push(name);
+        render(); showToast('已新增');
+        persist('am2:podcastCategories', state.podcastCategories);
       };
     }
     if(modal && modal.type==='confirmDel' && (modal.kind==='book'||modal.kind==='podcast')){
@@ -1671,13 +1941,17 @@
       <div class="am-body">
         <div class="am-subtab-bar">
           <button class="am-subtab-btn ${dailySubTab==='行程'?'sel':''}" data-daily-subtab="行程">行程</button>
-          <button class="am-subtab-btn ${dailySubTab==='健身'?'sel':''}" data-daily-subtab="健身">健身</button>
-          <button class="am-subtab-btn ${dailySubTab==='多益'?'sel':''}" data-daily-subtab="多益">多益</button>
+          <button class="am-subtab-btn ${dailySubTab==='自我提升'?'sel':''}" data-daily-subtab="自我提升">自我提升</button>
         </div>
 
         ${dailySubTab==='行程' ? `
         <div class="am-card">
           <div class="am-section-title">行程 <span style="display:flex; gap:10px;"><button class="am-add-btn" id="am-add-event">＋ 新增行程</button>${sectionEditBtn('event','行程')}</span></div>
+          <div class="am-quick-tabs" style="margin-bottom:12px;">
+            <button class="am-quick-tab ${dailyEventView==='清單'?'sel':''}" data-daily-eventview="清單">清單</button>
+            <button class="am-quick-tab ${dailyEventView==='日曆'?'sel':''}" data-daily-eventview="日曆">日曆</button>
+          </div>
+          ${dailyEventView==='清單' ? `
           <div class="am-list">
             ${events.length===0?'<div class="am-empty">還沒有行程</div>':
               events.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(ev=>`
@@ -1694,10 +1968,46 @@
                   </div>
                 </div>`).join('')}
           </div>
+          ` : `
+          ${(()=>{
+            if(!dailyCalendarYM) dailyCalendarYM = new Date().getFullYear()+'-'+pad(new Date().getMonth()+1);
+            const [cy, cm] = dailyCalendarYM.split('-').map(Number);
+            const firstDay = new Date(cy, cm-1, 1);
+            const daysInMonth = new Date(cy, cm, 0).getDate();
+            const startWeekday = firstDay.getDay();
+            const eventsByDate = {};
+            events.forEach(ev=>{ if(ev.date){ (eventsByDate[ev.date] = eventsByDate[ev.date]||[]).push(ev); } });
+            let cells = '';
+            for(let i=0;i<startWeekday;i++){ cells += '<div></div>'; }
+            for(let d=1; d<=daysInMonth; d++){
+              const dateStr = cy+'-'+pad(cm)+'-'+pad(d);
+              const dayEvents = eventsByDate[dateStr]||[];
+              const isToday = dateStr === new Date().toISOString().slice(0,10);
+              cells += `
+                <div class="am-cal-cell ${isToday?'today':''}" data-daily-cal-day="${dateStr}">
+                  <div class="am-cal-daynum">${d}</div>
+                  ${dayEvents.length>0?`<div class="am-cal-dot">${dayEvents.length}</div>`:''}
+                </div>`;
+            }
+            return `
+            <div class="am-budget-view-bar">
+              <div class="am-row-name">${cy}年${cm}月</div>
+              <div class="am-period-nav">
+                <button id="am-daily-cal-prev">‹</button>
+                <button id="am-daily-cal-next">›</button>
+              </div>
+            </div>
+            <div class="am-cal-grid am-cal-weekdays">
+              <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+            </div>
+            <div class="am-cal-grid">${cells}</div>
+            <div class="am-hint">點日期可以新增當天的行程</div>`;
+          })()}
+          `}
         </div>
         ` : ''}
 
-        ${dailySubTab==='健身' ? `
+        ${dailySubTab==='自我提升' ? `
         <div class="am-card">
           <div class="am-section-title">健身紀錄 <span style="display:flex; gap:10px;"><button class="am-add-btn" id="am-add-fitness">＋ 新增紀錄</button>${sectionEditBtn('fitness','健身')}</span></div>
           <div class="am-list">
@@ -1712,9 +2022,7 @@
                 </div>`).join('')}
           </div>
         </div>
-        ` : ''}
 
-        ${dailySubTab==='多益' ? `
         <div class="am-card">
           <div class="am-section-title">多益成績 <span style="display:flex; gap:10px;"><button class="am-add-btn" id="am-add-toeic">＋ 新增成績</button>${sectionEditBtn('toeic','多益')}</span></div>
           <div class="am-list">
@@ -1812,6 +2120,24 @@
     });
     root.querySelectorAll('[data-daily-subtab]').forEach(b=>{
       b.onclick = ()=>{ dailySubTab = b.dataset.dailySubtab; render(); };
+    });
+    root.querySelectorAll('[data-daily-eventview]').forEach(b=>{
+      b.onclick = ()=>{ dailyEventView = b.dataset.dailyEventview; render(); };
+    });
+    const dailyCalPrev = $('#am-daily-cal-prev'); if(dailyCalPrev) dailyCalPrev.onclick = ()=>{
+      const [y,m] = dailyCalendarYM.split('-').map(Number);
+      const d = new Date(y, m-2, 1);
+      dailyCalendarYM = d.getFullYear()+'-'+pad(d.getMonth()+1);
+      render();
+    };
+    const dailyCalNext = $('#am-daily-cal-next'); if(dailyCalNext) dailyCalNext.onclick = ()=>{
+      const [y,m] = dailyCalendarYM.split('-').map(Number);
+      const d = new Date(y, m, 1);
+      dailyCalendarYM = d.getFullYear()+'-'+pad(d.getMonth()+1);
+      render();
+    };
+    root.querySelectorAll('[data-daily-cal-day]').forEach(b=>{
+      b.onclick = ()=> openModal({type:'addEvent', date:b.dataset.dailyCalDay});
     });
     root.querySelectorAll('[data-toggle-section-edit]').forEach(b=>{
       b.onclick = ()=>{
@@ -2351,6 +2677,7 @@
       const startDate = modal.startDate ?? (editing?editing.startDate:new Date().toISOString().slice(0,10));
       const endDate = modal.endDate ?? (editing?editing.endDate:'');
       const notes = modal.notes ?? (editing?(editing.notes||''):'');
+      if(!modal.blocks) modal.blocks = normalizeNoteBlocks(notes);
       return `
       <div class="am-overlay" id="am-overlay"><div class="am-sheet">
         <div class="am-sheet-title">${editing?'編輯':'新增'}工作項目</div>
@@ -2373,7 +2700,7 @@
           <div class="am-field"><label>結束時間</label><input type="date" id="am-wi-end" value="${endDate}"></div>
         </div>
         <div class="am-field"><label>所用時長(天)</label><input type="number" inputmode="decimal" id="am-wi-hours" value="${hours}"></div>
-        <div class="am-field"><label>筆記</label><textarea id="am-wi-notes" rows="5" placeholder="像 Notion 一樣,想寫什麼都可以" style="width:100%; border:1px solid var(--hairline); border-radius:10px; padding:10px 12px; font-size:14.5px; font-family:'Inter',sans-serif; color:var(--ink); resize:vertical;">${escapeHtml(notes)}</textarea></div>
+        <div class="am-field"><label>筆記</label>${renderNoteBlocksEditor(modal.blocks)}</div>
         <div class="am-sheet-actions">${editing?'<button class="am-btn danger" id="am-del-wi-inline">刪除</button>':''}<button class="am-btn ghost" id="am-cancel">取消</button><button class="am-btn primary" id="am-save-workitem">儲存</button></div>
       </div></div>`;
     }
@@ -2896,11 +3223,13 @@
           modal.name=$('#am-wi-name').value; modal.workType=$('#am-wi-worktype').value;
           modal.category=$('#am-wi-category').value; modal.hours=$('#am-wi-hours').value;
           modal.startDate=$('#am-wi-start').value; modal.endDate=$('#am-wi-end').value;
-          modal.notes=$('#am-wi-notes').value;
+          syncNoteBlocksFromDOM();
           modal.status = b.dataset.setWistatus; render();
         };
       });
+      bindNoteBlockEvents();
       $('#am-save-workitem').onclick = ()=>{
+        syncNoteBlocksFromDOM();
         const name = $('#am-wi-name').value.trim();
         const workType = $('#am-wi-worktype').value;
         const category = $('#am-wi-category').value;
@@ -2908,7 +3237,7 @@
         const startDate = $('#am-wi-start').value;
         const endDate = $('#am-wi-end').value;
         const hours = parseFloat($('#am-wi-hours').value)||0;
-        const notes = $('#am-wi-notes').value;
+        const notes = modal.blocks;
         if(!name){ showToast('請輸入作業項目名稱'); return; }
         state.workItems = state.workItems || [];
         if(modal.itemId){
