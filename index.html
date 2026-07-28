@@ -582,13 +582,13 @@
     const manualTx = (pocket.manualAdjustments||[]).map(a=>({id:a.id, datetime:a.date+'T00:00:00', amount:a.amount}));
     const combined = [...txs, ...manualTx].sort((a,b)=>a.datetime.localeCompare(b.datetime));
     let running = pocket.startingBalance||0;
-    let crossingId = null;
+    let crossingDatetime = null;
     combined.forEach(t=>{
       running += t.amount;
-      if(running - threshold < 0){ if(crossingId===null) crossingId = t.id; }
-      else { crossingId = null; }
+      if(running - threshold < 0){ if(crossingDatetime===null) crossingDatetime = t.datetime; }
+      else { crossingDatetime = null; }
     });
-    return crossingId;
+    return crossingDatetime;
   }
   function collectKnownCat1(){
     const set = new Set();
@@ -793,7 +793,7 @@
       bodyHtml = rows.length===0 ? '<div class="am-empty">這段期間沒有紀錄</div>' : rows.map(l=>{
         const pk = state.pockets.find(p=>p.account===l.account);
         const accountLabel = pk ? pk.name : l.account;
-        const isShort = pk && shortfallPocketIds.has(pk.id) && shortfallStartTx[pk.id]===l.id;
+        const isShort = pk && shortfallPocketIds.has(pk.id) && shortfallStartTx[pk.id] && l.datetime>=shortfallStartTx[pk.id];
         return `
         <div class="am-row" style="display:grid; grid-template-columns:1.5fr 0.9fr 0.6fr; gap:8px; align-items:start;">
           <div>
@@ -803,7 +803,7 @@
           <div style="text-align:right;">
             <div class="am-row-amt ${l.type==='收入'?'inc':'exp'} am-num">${isShort?'⚠️ ':''}${escapeHtml(accountLabel)}</div>
             <div class="am-row-amt ${l.type==='收入'?'inc':'exp'} am-num">${l.type==='收入'?'+':'-'}${fmtRaw(l.amount)}</div>
-            ${isShort ? `<div class="am-row-sub" style="color:var(--rust);">餘額從這筆開始轉負</div>` : ''}
+            ${isShort ? `<div class="am-row-sub">這段期間帳戶不夠用</div>` : ''}
           </div>
           <div style="text-align:right;">
             <button class="am-adj-btn" data-edit-tx="${l.id}">編輯</button>
