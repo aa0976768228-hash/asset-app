@@ -576,7 +576,8 @@
     const manual = (pocket.manualAdjustments||[]).reduce((s,a)=>s+a.amount,0);
     return (pocket.startingBalance||0) + pocketLedgerSum(pocket.account) + manual;
   }
-  function findShortfallStartTxId(pocket){
+  function findShortfallStartTxId(pocket, proj){
+    const threshold = (proj.unpaidFixed||0) + (proj.remainingBudget||0);
     const txs = state.ledger.filter(l=>l.account===pocket.account).map(l=>({id:l.id, datetime:l.datetime, amount:l.amount}));
     const manualTx = (pocket.manualAdjustments||[]).map(a=>({id:a.id, datetime:a.date+'T00:00:00', amount:a.amount}));
     const combined = [...txs, ...manualTx].sort((a,b)=>a.datetime.localeCompare(b.datetime));
@@ -584,7 +585,7 @@
     let crossingId = null;
     combined.forEach(t=>{
       running += t.amount;
-      if(running<0){ if(crossingId===null) crossingId = t.id; }
+      if(running - threshold < 0){ if(crossingId===null) crossingId = t.id; }
       else { crossingId = null; }
     });
     return crossingId;
@@ -934,7 +935,7 @@
     const shortfalls = projections.filter(x=>x.proj.projected<0);
     shortfallPocketIds = new Set(shortfalls.map(x=>x.pocket.id));
     shortfallStartTx = {};
-    shortfalls.forEach(x=>{ shortfallStartTx[x.pocket.id] = findShortfallStartTxId(x.pocket); });
+    shortfalls.forEach(x=>{ shortfallStartTx[x.pocket.id] = findShortfallStartTxId(x.pocket, x.proj); });
 
     const totalCash = state.pockets.reduce((s,p)=>s+pocketBalance(p),0);
     const currentCashOnly = projections.filter(x=>(x.pocket.category||'cash')==='cash').reduce((s,x)=>s+x.proj.balance,0);
@@ -1217,7 +1218,7 @@
                 const over = spent>displayAmount;
                 return `
                 <div style="padding:11px 0; border-bottom:1px solid var(--hairline);">
-                  <div style="display:grid; grid-template-columns:46px 1fr; gap:12px; align-items:center;">
+                  <div style="display:grid; grid-template-columns:46px 1fr 1.1fr; gap:12px; align-items:center;">
                     <div class="am-mini-ring">${ringSvg(pct,44,over?'var(--rust)':'var(--green)','var(--hairline)')}
                       <div class="am-mini-ring-pct">${pctDisplay}%</div>
                     </div>
@@ -1225,24 +1226,26 @@
                       <div class="am-row-name">${escapeHtml(b.name)}</div>
                       <div class="am-row-sub">${pocket?escapeHtml(pocket.name):'未指派口袋'}</div>
                     </div>
+                    <div style="text-align:right;">
+                      ${(()=>{
+                        if(budgetView.mode==='year'){
+                          const lastYearSpend = budgetLastYearSpend(b);
+                          const diff = lastYearSpend - displayAmount;
+                          return `<div class="am-row-sub">去年花費 ${fmtMoney(lastYearSpend)}</div><div class="am-row-sub">${diff>0?('需增加 '+fmtMoney(diff)):('剩餘 '+fmtMoney(-diff))}</div>`;
+                        } else {
+                          const {avg, count} = budgetAvgCycleSpend(b);
+                          if(count===0) return `<div class="am-row-sub">尚無足夠週期資料</div>`;
+                          const diff = avg - b.amount;
+                          return `<div class="am-row-sub">近${count}期平均 ${fmtMoney(avg)}</div><div class="am-row-sub">${diff>0?('需增加 '+fmtMoney(diff)):('剩餘 '+fmtMoney(-diff))}</div>`;
+                        }
+                      })()}
+                    </div>
                   </div>
                   <div style="padding-left:58px; margin-top:6px;">
                     <div class="am-row-sub">已花</div>
                     <div class="am-num-big am-num">${fmtMoney(spent)} <span style="font-size:var(--font-sm); font-weight:600; color:var(--ink-soft);">/ ${fmtMoney(displayAmount)}</span></div>
                     <div class="am-row-sub" style="margin-top:4px;">${over?'超支':'剩餘'}</div>
                     <div class="am-num-big am-num" style="color:${over?'var(--rust)':'var(--green)'}">${fmtMoney(over?(spent-displayAmount):(displayAmount-spent))}</div>
-                    ${(()=>{
-                      if(budgetView.mode==='year'){
-                        const lastYearSpend = budgetLastYearSpend(b);
-                        const diff = lastYearSpend - displayAmount;
-                        return `<div class="am-row-sub" style="margin-top:6px;">去年花費 ${fmtMoney(lastYearSpend)}・${diff>0?('比預算需增加 '+fmtMoney(diff)):('比預算剩餘 '+fmtMoney(-diff))}</div>`;
-                      } else {
-                        const {avg, count} = budgetAvgCycleSpend(b);
-                        if(count===0) return `<div class="am-row-sub" style="margin-top:6px;">還沒有足夠的發薪週期資料可以比較</div>`;
-                        const diff = avg - b.amount;
-                        return `<div class="am-row-sub" style="margin-top:6px;">近${count}期平均花費 ${fmtMoney(avg)}・${diff>0?('比預算需增加 '+fmtMoney(diff)):('比預算剩餘 '+fmtMoney(-diff))}</div>`;
-                      }
-                    })()}
                   </div>
                   ${editSections.has('budget') ? `<div style="padding-left:58px; margin-top:8px;"><button class="am-row-del" data-del-budget="${b.id}" title="刪除">刪除</button></div>` : ''}
                 </div>`;
